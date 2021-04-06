@@ -43,10 +43,6 @@ set_global_assignment -name TOP_LEVEL_ENTITY Top
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 16.1.0
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "11:40:34  三月 26, 2021"
 set_global_assignment -name LAST_QUARTUS_VERSION "16.1.0 Standard Edition"
-set_global_assignment -name SYSTEMVERILOG_FILE src/DE2_115/SevenHexDecoder.sv
-set_global_assignment -name SYSTEMVERILOG_FILE src/DE2_115/Debounce.sv
-set_global_assignment -name SYSTEMVERILOG_FILE src/DE2_115/DE2_115.sv
-set_global_assignment -name SYSTEMVERILOG_FILE src/Top.sv
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
 set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
 set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
@@ -1104,3 +1100,15 @@ set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "0 MHz" -to HEX6
 set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "0 MHz" -to HEX7
 set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "0 MHz" -to KEY
 set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "0 MHz" -to SW
+set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
+set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
+set_global_assignment -name VERILOG_FILE src/agua/agua_inst.v
+set_global_assignment -name VERILOG_FILE src/agua/agua_bb.v
+set_global_assignment -name SYSTEMVERILOG_FILE src/I2cInitializer.sv
+set_global_assignment -name SYSTEMVERILOG_FILE src/AudRecorder.sv
+set_global_assignment -name SYSTEMVERILOG_FILE src/AudPlayer.sv
+set_global_assignment -name SYSTEMVERILOG_FILE src/AudDSP.sv
+set_global_assignment -name SYSTEMVERILOG_FILE src/DE2_115/SevenHexDecoder.sv
+set_global_assignment -name SYSTEMVERILOG_FILE src/DE2_115/Debounce.sv
+set_global_assignment -name SYSTEMVERILOG_FILE src/DE2_115/DE2_115.sv
+set_global_assignment -name SYSTEMVERILOG_FILE src/Top.sv
