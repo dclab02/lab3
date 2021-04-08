@@ -47,12 +47,13 @@ module Top (
 
 // design the FSM and states as you like
 parameter S_IDLE       = 0;
-parameter S_I2C        = 1;
+parameter S_I2C_INIT   = 1;
 parameter S_RECD       = 2;
 parameter S_RECD_PAUSE = 3;
 parameter S_PLAY       = 4;
 parameter S_PLAY_PAUSE = 5;
 
+logic [2:0] state_r, state_w;
 logic i2c_oen, i2c_sdat;
 logic [19:0] addr_record, addr_play;
 logic [15:0] data_record, data_play, dac_data;
@@ -130,13 +131,39 @@ AudRecorder recorder0(
 
 always_comb begin
 	// design your control here
+	state_w = state_r;
+
+	case (state_r)
+		S_IDLE: begin
+			
+		end
+		S_I2C_INIT: begin
+			
+		end
+		S_RECD: begin
+			
+		end
+		S_RECD_PAUSE: begin
+			
+		end
+		S_PLAY: begin
+			
+		end
+		S_PLAY_PAUSE: begin
+			
+		end
+
+		default: 
+		state_w = state_r;
+	endcase
 end
 
 always_ff @(posedge i_AUD_BCLK or posedge i_rst_n) begin
 	if (!i_rst_n) begin
-		
+        state_r <= S_IDLE;
 	end
 	else begin
+        state_r <= state_w;
 		
 	end
 end
