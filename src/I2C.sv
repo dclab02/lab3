@@ -8,7 +8,7 @@ module I2C(
     input   i_reg_data, // chip reg and data (7 + 9 bit)
 
     output	o_finished,
-    output	o_sclk, 
+    output	o_sclk,     // s clock for i2c
     inout	o_sdat,     // data in / out
     output	o_oen       // you are outputing (you are not outputing only when you are "ack"ing.)
 );
@@ -19,7 +19,7 @@ parameter S_RW       = 2;       // sending R/W
 parameter S_REG_DATA_UPPER = 3; // sending register and data bits
 parameter S_REG_DATA_LOWER = 4; // sending register and data bits
 parameter S_ACK      = 5;       // ack state
-parameter S_STOP     = 6;
+parameter S_STOP     = 6;       // stop state
 
 
 logic [2:0] state_r, state_w;
@@ -27,10 +27,12 @@ logic [2:0] prev_state_r, prev_state_w; // previous state for S_ACK to determine
 logic data_r, data_w; // data on i2c
 logic oen_r, oen_w; // open enable
 logic [2:0] counter_r, counter_w; // counter, every 8 bits will jump to ack state and back
+logic fin_r, fin_w; // finish
 
 assign o_sclk = (state_r == S_IDLE || state_r == S_STOP) ? 1'b1 : i_clk; // if not idle, it's the clock, otherwise, should be 1
 assign o_oen = oen_r;
 assign o_sdat = data_r;
+assign o_finished = fin_r;
 
 always_comb begin
     state_w = state_r;
@@ -38,9 +40,12 @@ always_comb begin
     data_w = data_r;
     oen_w = oen_r;
     counter_w = counter_r;
+    fin_w = fin_r;
     case (state_r)
         // idle, not sending or reading from i2c
         S_IDLE: begin
+            fin_w = 0;
+            data_w = 1;
             if (i_start) begin // pull down o_sdat, pull up oen_r
                 state_w = S_ADDR;
                 oen_w = 1;
@@ -51,13 +56,9 @@ always_comb begin
 
         // sending address (only 7 bit)
         S_ADDR: begin
-            if (counter_r < 7) beginx
-                data_w = i_addr[counter_r];
-                counter_w = counter_r + 1'b1;
-            end
-            else begin
-                state_w = S_RW;
-            end
+            data_w = i_addr[counter_r];
+            counter_w = counter_r + 1'b1;
+            if (counter_r == 6) state_w = S_RW;
         end
 
         // sending R/W (only 1 bit) to i2c, will jump to ack
@@ -70,6 +71,7 @@ always_comb begin
             end
         end
 
+        // sending REG and DATA's upper 8 bit
         S_REG_DATA_UPPER: begin
             data_w = i_reg_data[counter_r];
             counter_w = counter_r + 1'b1;
@@ -80,6 +82,7 @@ always_comb begin
             end
         end
 
+        // sending REG and DATA's lower 8 bit
         S_REG_DATA_LOWER: begin
             data_w = i_reg_data[counter_r + 8];
             counter_w = counter_r + 1'b1;
@@ -93,7 +96,7 @@ always_comb begin
         S_STOP: begin
             data_w = 1;
             state_w = S_IDLE;
-            o_finished = 1;
+            fin_w = 1;
         end
 
         S_ACK: begin
@@ -121,9 +124,10 @@ always_ff @(posedge i_clk or posedge i_rst_n) begin
     if (!i_rst_n) begin
         state_r <= S_IDLE;
         prev_state_r <= S_IDLE;
-        data_r <= 0;
+        data_r <= 1;
         oen_r <= 1;
         counter_r <= 0;
+        fin_r <= 0;
     end
    
     else begin
@@ -132,8 +136,8 @@ always_ff @(posedge i_clk or posedge i_rst_n) begin
         data_r <= data_w;
         oen_r <= oen_w;
         counter_r <= counter_w;
+        fin_r <= fin_w;
     end
 end
-
 
 endmodule
