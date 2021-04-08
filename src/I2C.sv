@@ -1,7 +1,7 @@
 // send / receive I2C data
 module I2C(
     input	i_rst_n,
-    input	i_clk,      // s_clk
+    input	i_clk,      
     input	i_start,    // control if start
     input   i_addr,     // chip address (7 bit)
     input   i_rw,       // chip R/W (1'b0 | 1'b1)
@@ -20,7 +20,6 @@ parameter S_REG_DATA_UPPER = 3; // sending register and data bits
 parameter S_REG_DATA_LOWER = 4; // sending register and data bits
 parameter S_ACK      = 5;       // ack state
 parameter S_STOP     = 6;       // stop state
-
 
 logic [2:0] state_r, state_w;
 logic [2:0] prev_state_r, prev_state_w; // previous state for S_ACK to determine where to go next
@@ -93,6 +92,7 @@ always_comb begin
             end
         end
 
+        // stop, pull data_w from 0 to 1, indicate stop                              
         S_STOP: begin
             data_w = 1;
             state_w = S_IDLE;
@@ -114,7 +114,7 @@ always_comb begin
             else if (prev_state_r == S_REG_DATA_LOWER) begin
                 // TODO: Stop, return to IDLE
                 state_w = S_STOP;
-                data_w = 0;
+                data_w = 0; // to stop, make data_w 0 first, will be pulled up by S_STOP
                 oen_w = 1;
             end
         end

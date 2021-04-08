@@ -128,7 +128,9 @@ AudRecorder recorder0(
 	.o_address(addr_record),
 	.o_data(data_record),
 );
-
+S_IDLE: begin
+		end
+		
 always_comb begin
 	// design your control here
 	state_w = state_r;
