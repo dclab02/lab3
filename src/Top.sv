@@ -160,7 +160,7 @@ always_comb begin
 	endcase
 end
 
-always_ff @(posedge i_AUD_BCLK or posedge i_rst_n) begin
+always_ff @(posedge i_AUD_BCLK or negedge i_rst_n) begin
 	if (!i_rst_n) begin
         state_r <= S_IDLE;
 	end

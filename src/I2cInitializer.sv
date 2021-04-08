@@ -18,25 +18,23 @@ parameter S_FINISH 	= 3; // finish setup
 parameter Address = 7'b0011010; // wm8731 address
 parameter RW = 1'b0; // i2c writing (0)
 // reg and data
-parameter Reset = 16'b0001111000000000;
-parameter Analogue_Audio_Path_Control = 16'b0000100000010101;
-parameter Digital_Audio_Path_Control = 16'b0000101000000000;
-parameter Power_Down_Control = 16'b0000110000000000;
+parameter Reset 						 = 16'b0001111000000000;
+parameter Analogue_Audio_Path_Control 	 = 16'b0000100000010101;
+parameter Digital_Audio_Path_Control 	 = 16'b0000101000000000;
+parameter Power_Down_Control 			 = 16'b0000110000000000;
 parameter Digital_Audio_Interface_Format = 16'b0000111001000010;
-parameter Sampling_Control = 16'b0001000000011001;
-parameter Active_Control = 16'b0001001000000001;
+parameter Sampling_Control 				 = 16'b0001000000011001;
+parameter Active_Control 				 = 16'b0001001000000001;
 
 logic [1:0] state_r, state_w; // state
 logic [15:0] reg_data_r, reg_data_w; // reg and data
 logic [2:0] counter_r, counter_w; // counter from 0 to 6, which is to send reg and data
 logic start_r, start_w; // tell i2c module to start
 logic fin_r, fin_w;     // tell upper this initialize finished
-logic [6:0] addr;		// chip Address
-logic rw;				// chip RW
-logic i2c_fin;			// get i2c finish or not
+logic [6:0] addr = Address; // chip Address
+logic rw = RW; // chip RW
+logic i2c_fin; // get i2c finish or not
 
-assign addr = Address;
-assign rw = RW;
 assign o_finished = fin_r;
 
 I2C i2c(
@@ -58,7 +56,7 @@ always_comb begin
 	counter_w = counter_r;
 	start_w = start_r;
 	fin_w = fin_r;
-	case (state_r) begin
+	case (state_r)
 
 		S_IDLE: begin
 			start_w = 0;
@@ -100,10 +98,10 @@ always_comb begin
 			fin_w = 1;
 			// state_w = S_IDLE; maybe don't need to jump back to idle
 		end
-	end
+	endcase
 end
 
-always_ff @(posedge i_clk or posedge i_rst_n) begin
+always_ff @(posedge i_clk or negedge i_rst_n) begin
 	// design your control here
     if (!i_rst_n) begin
 		state_r <= S_IDLE;

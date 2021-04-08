@@ -1,11 +1,11 @@
 // send / receive I2C data
-module I2C(
+module I2C (
     input	i_rst_n,
     input	i_clk,      
-    input	i_start,    // control if start
-    input   i_addr,     // chip address (7 bit)
-    input   i_rw,       // chip R/W (1'b0 | 1'b1)
-    input   i_reg_data, // chip reg and data (7 + 9 bit)
+    input	i_start,            // control if start
+    input   [6:0] i_addr,       // chip address (7 bit)
+    input   i_rw,               // chip R/W (1'b0 | 1'b1)
+    input   [15:0] i_reg_data,  // chip reg and data (7 + 9 bit)
 
     output	o_finished,
     output	o_sclk,     // s clock for i2c
@@ -28,9 +28,9 @@ logic oen_r, oen_w; // open enable
 logic [2:0] counter_r, counter_w; // counter, every 8 bits will jump to ack state and back
 logic fin_r, fin_w; // finish
 
-assign o_sclk = (state_r == S_IDLE || state_r == S_STOP) ? 1'b1 : i_clk; // if not idle, it's the clock, otherwise, should be 1
+assign o_sclk = (state_r == S_IDLE || state_r == S_STOP || state_r == S_ACK) ? 1'b1 : i_clk; // if not idle, it's the clock, otherwise, should be 1
 assign o_oen = oen_r;
-assign o_sdat = data_r;
+assign o_sdat = oen_r ? data_r : 1'bz;
 assign o_finished = fin_r;
 
 always_comb begin
@@ -83,7 +83,7 @@ always_comb begin
 
         // sending REG and DATA's lower 8 bit
         S_REG_DATA_LOWER: begin
-            data_w = i_reg_data[counter_r + 8];
+            data_w = i_reg_data[counter_r];
             counter_w = counter_r + 1'b1;
             if (counter_r == 7) begin
                 state_w = S_ACK;
@@ -104,7 +104,7 @@ always_comb begin
 
             counter_w = 0;
             if (prev_state_r == S_RW) begin
-                state_w = S_REG;
+                state_w = S_REG_DATA_UPPER;
                 oen_w = 1; // go back to output 
             end
             else if (prev_state_r == S_REG_DATA_UPPER) begin
@@ -118,9 +118,10 @@ always_comb begin
                 oen_w = 1;
             end
         end
+    endcase
 end
 
-always_ff @(posedge i_clk or posedge i_rst_n) begin
+always_ff @(posedge i_clk or negedge i_rst_n) begin
     if (!i_rst_n) begin
         state_r <= S_IDLE;
         prev_state_r <= S_IDLE;
