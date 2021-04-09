@@ -3,22 +3,58 @@ module AudPlayer (
 	input   i_bclk,
 	input   i_daclrck,
 	input   i_en, // enable AudPlayer only when playing audio, work with AudDSP
-	input   i_dac_data, //dac_data
+	input   [15:0] i_dac_data, //dac_data
 	output  o_aud_dacdat
 );
 
+localparam S_IDLE      = 0;
+localparam S_PLAYING   = 1;
+localparam S_FINISHED  = 2;
+
+logic [1:0] state_r, state_w;
+logic [15:0] audio_data;
+logic [3:0] data_cnt_r, data_cnt_w;
+logic playing;
+logic lrc_r, lrc_w;
+
+assign o_aud_dacdat = audio_data[15];
 
 always_comb begin
-	// design your control here
+	state_w = state_r;
+	data_cnt_w = data_cnt_r;
+	case (state_r)
+		S_IDLE: begin
+			if (i_en && !i_daclrck) begin
+				playing = 1'b1;
+				audio_data = i_dac_data;
+				state_w = S_PLAYING;
+			end 
+		end
+		S_PLAYING: begin
+			if (data_cnt_r == 15) begin
+				data_cnt_w = 3'b0;
+				playing = 1'b0;
+				state_w = S_IDLE;
+			end
+			else begin
+				audio_data = audio_data << 1;
+				data_cnt_w = data_cnt_r + 1'b1;
+			end
+		end
+		default: 
+	endcase
 end
 
 always_ff @(posedge i_bclk or posedge i_rst_n) begin
 	// design your control here
     if (!i_rst_n) begin
-		
+		state_r <= S_IDLE;
+		data_cnt_r <= 3'b0;
+		audio_data <= 16'b0;
 	end
 	else begin
-		
+		state_r <= state_w;
+		data_cnt_r <= data_cnt_w;
 	end
 end
 endmodule

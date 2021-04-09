@@ -1,9 +1,9 @@
 module Top (
 	input i_rst_n,
 	input i_clk,
-	input i_key_0,
-	input i_key_1,
-	input i_key_2,
+	input i_key_0,  // Record/Pause
+	input i_key_1,  // Play/Pause
+	input i_key_2,  // Stop
 	// input [3:0] i_speed, // design how user can decide mode on your own
 	
 	// AudDSP and SRAM
@@ -28,8 +28,8 @@ module Top (
 	output o_AUD_DACDAT
 
 	// SEVENDECODER (optional display)
-	// output [5:0] o_record_time,
-	// output [5:0] o_play_time,
+	output [5:0] o_record_time,
+	output [5:0] o_play_time,
 
 	// LCD (optional display)
 	// input        i_clk_800k,
@@ -46,17 +46,20 @@ module Top (
 );
 
 // design the FSM and states as you like
-parameter S_IDLE       = 0;
-parameter S_I2C_INIT   = 1;
-parameter S_RECD       = 2;
-parameter S_RECD_PAUSE = 3;
-parameter S_PLAY       = 4;
-parameter S_PLAY_PAUSE = 5;
+localparam S_IDLE       = 0;
+localparam S_I2C_INIT   = 1;
+localparam S_RECD       = 2;
+localparam S_RECD_PAUSE = 3;
+localparam S_PLAY       = 4;
+localparam S_PLAY_PAUSE = 5;
 
 logic [2:0] state_r, state_w;
 logic i2c_oen, i2c_sdat;
 logic [19:0] addr_record, addr_play;
 logic [15:0] data_record, data_play, dac_data;
+
+logic i2c_init, i2c_init_stat;
+logic recd_start, recd_pause, recd_stop;
 
 assign io_I2C_SDAT = (i2c_oen) ? i2c_sdat : 1'bz;
 
@@ -78,8 +81,8 @@ assign o_SRAM_UB_N = 1'b0;
 I2cInitializer init0(
 	.i_rst_n(i_rst_n),
 	.i_clk(i_clk_100K),
-	.i_start(),
-	.o_finished(),
+	.i_start(i2c_init),
+	.o_finished(i2c_init_stat),
 	.o_sclk(o_I2C_SCLK),
 	.o_sdat(i2c_sdat),
 	.o_oen(i2c_oen) // you are outputing (you are not outputing only when you are "ack"ing.)
@@ -100,6 +103,7 @@ AudDSP dsp0(
 	.i_slow_1(), // linear interpolation
 	.i_daclrck(i_AUD_DACLRCK),
 	.i_sram_data(data_play),
+	.i_end_addr(),
 	.o_dac_data(dac_data),
 	.o_sram_addr(addr_play)
 );
@@ -121,38 +125,53 @@ AudRecorder recorder0(
 	.i_rst_n(i_rst_n), 
 	.i_clk(i_AUD_BCLK),
 	.i_lrc(i_AUD_ADCLRCK),
-	.i_start(),
-	.i_pause(),
-	.i_stop(),
+	.i_start(recd_start),
+	.i_pause(recd_pause),
+	.i_stop(i_key_2),
 	.i_data(i_AUD_ADCDAT),
 	.o_address(addr_record),
 	.o_data(data_record),
 );
-S_IDLE: begin
-		end
-		
+
 always_comb begin
-	// design your control here
 	state_w = state_r;
 
 	case (state_r)
-		S_IDLE: begin
-			
-		end
 		S_I2C_INIT: begin
-			
+			if (i2c_init_stat) begin
+				i2c_init = 1'b0;
+				state_w = S_IDLE;
+			end
+		end
+		S_IDLE: begin
+			if (i_key_0) begin // start recording
+				state_w = S_RECD;
+			end
+			if (i_key_1) begin // start playing
+				state_w = S_PLAY;
+			end
 		end
 		S_RECD: begin
+			if (i_key_2) begin
+				recd_stop = 1'b1;
+				state_w = S_IDLE;
+			end
 			
 		end
 		S_RECD_PAUSE: begin
-			
+			if (i_key_0) begin
+				state_w = S_RECD;
+			end
 		end
 		S_PLAY: begin
-			
+			if (i_key_2) begin
+				 
+			end
 		end
 		S_PLAY_PAUSE: begin
-			
+			if (i_key_1) begin
+				state_w = S_PLAY;
+			end
 		end
 
 		default: 
@@ -162,7 +181,8 @@ end
 
 always_ff @(posedge i_AUD_BCLK or negedge i_rst_n) begin
 	if (!i_rst_n) begin
-        state_r <= S_IDLE;
+		i2c_init = 1'b0;
+        state_r <= S_I2C_INIT;
 	end
 	else begin
         state_r <= state_w;
