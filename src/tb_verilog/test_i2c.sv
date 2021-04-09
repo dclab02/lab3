@@ -19,7 +19,7 @@ module tb;
     logic rst, clk, start, fin, sclk, oen;
     logic rw = RW;
     logic [6:0] addr = Address;
-    logic [15:0] reg_data = Reset;
+    logic [15:0] reg_data = Analogue_Audio_Path_Control;
 
     wire sdat;
 
@@ -53,9 +53,10 @@ module tb;
         rst=1;
         start = 1;
         #CLK
-        // start = 0;
+        start = 0;
         @(posedge fin)
         $display("finish i2c");
+		#(2*CLK)
         $finish;
 	end
 
