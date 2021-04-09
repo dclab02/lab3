@@ -2,7 +2,8 @@
 
 module tb;
     // address and rw
-    localparam audio_dat = 16'b1010101010101010; // test data
+    localparam audio_dat = 16'b1110101010101011;
+    localparam audio_dat2 = 16'b1011101110101001;
     // reg and data
 
 
@@ -15,7 +16,7 @@ module tb;
     logic [19:0] addr;
     logic [15:0] data_record;
 
-	initial clk = 0;
+	initial clk = 1;
 	always #HCLK clk = ~clk;
 
     AudRecorder recorder0(
@@ -43,17 +44,43 @@ module tb;
 
         $display("start...");
         start = 1;
-        #(5*CLK)
+        stop = 0;
         i_AUD_ADCLRCK = 1'b1;
-        #(5*CLK)
-        for (int i = 0; i < 16; i = i + 1) begin
-            @(posedge clk);
-            i_AUD_ADCDAT = audio_dat[i];
-        end
+        #CLK
+        start = 0;
+
+        // start I2S comm
         #(5*CLK)
         i_AUD_ADCLRCK = 1'b0;
+        #(1*CLK)
+        for (int i = 0; i < 16; i = i + 1) begin
+            @(posedge clk)
+            i_AUD_ADCDAT = audio_dat[i];
+            $display("%1d, audio_dat[i] = %1d, i_AUD_ADCDAT = %1d", i, audio_dat[i], i_AUD_ADCDAT);
+        end
+        #CLK
+        i_AUD_ADCDAT = 16'bx;
+        #(5*CLK)
+        i_AUD_ADCLRCK = 1'b1;
+        #(20*CLK)
 
-        @(posedge fin)
+        i_AUD_ADCLRCK = 1'b0;
+        #CLK
+        for (int i = 0; i < 16; i = i + 1) begin
+            @(posedge clk)
+            i_AUD_ADCDAT = audio_dat2[i];
+        end
+        #CLK
+        i_AUD_ADCDAT = 16'bx;
+        #(5*CLK)
+        i_AUD_ADCLRCK = 1'b1;
+        #(2*CLK)
+        
+        stop = 1;
+        #CLK
+        stop = 0;
+
+        // @(posedge fin)
         $display("finish");
         $finish;
 	end

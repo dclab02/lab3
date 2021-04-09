@@ -81,6 +81,9 @@ always_comb begin
 					4: begin reg_data_w = Digital_Audio_Interface_Format; end
 					5: begin reg_data_w = Sampling_Control; end
 					6: begin reg_data_w = Active_Control; end
+					default: begin
+						reg_data_w = Reset;
+					end
 				endcase
 			end
 			else begin
@@ -89,10 +92,10 @@ always_comb begin
 		end
 
 		S_SETTING: begin
-			start_w = 0; // pull down start for i2c module to work correctly
+			start_w = 1'b0; // pull down start for i2c module to work correctly
 			if (i2c_fin) begin // i2c will pull this up when finished, then pull this down
 				state_w = S_START;
-				counter_w = counter_r + 1;
+				counter_w = counter_r + 1'b1;
 			end
 		end
 		

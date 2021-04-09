@@ -16,7 +16,6 @@ module tb;
     logic [15:0] data;
     logic [15:0] out_data;
     logic [15:0] sram_data [0:7];
-    logic [19:0] addr;
     logic [19:0] next_addr;
     logic [19:0] end_addr = End_Address;
     
@@ -44,7 +43,7 @@ module tb;
 
 	initial begin
         for (int i = 0; i < 8; i = i + 1) begin
-            sram_data[i] = i * 4;
+            sram_data[i] = i * 16;
         end
     end
     initial begin        
@@ -54,10 +53,10 @@ module tb;
         start = 0;
         pause = 0;
         stop = 0;
-        speed = 0;
+        speed = 7;
         fast = 0;
         slow_0 = 0;
-        slow_1 = 0;
+        slow_1 = 1;
         rst = 1;
         data = sram_data[0];
 		#(2*CLK)
@@ -67,17 +66,22 @@ module tb;
         start = 1;
         #(CLK)
         start = 0;
-        for (int i = 0; i < 8; i = i + 1) begin
-            data = sram_data[i];
+        $display("=========");
+        $display("data[%1d] = %2d ", 0, data);
+        @(negedge daclrck)
+        $display("out_data = %2d", out_data);
+        $display("next_addr = %2d", next_addr);
+        $display("=========");
+        do begin
+            data = sram_data[next_addr];
             $display("=========");
-			$display("data[%d] = %2d ", i, data);
-			$display("=========");
-			@(posedge daclrck)
-			$display("=========");
+			$display("data[%1d] = %2d ", next_addr, data);
+			@(negedge daclrck)
 			$display("out_data = %2d", out_data);
             $display("next_addr = %2d", next_addr);
 			$display("=========");
-		end
+		end while (next_addr <= (end_addr - 1));
+        $finish;
 	end
 
     initial begin

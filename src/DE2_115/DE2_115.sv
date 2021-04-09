@@ -138,6 +138,7 @@ module DE2_115 (
 
 logic key0down, key1down, key2down, key3down;
 logic CLK_12M, CLK_100K, CLK_800K;
+logic [3:0] play_time, recd_time;
 
 assign AUD_XCK = CLK_12M;
 
@@ -197,11 +198,19 @@ Top top0(
 	.i_AUD_ADCLRCK(AUD_ADCLRCK),
 	.i_AUD_BCLK(AUD_BCLK),
 	.i_AUD_DACLRCK(AUD_DACLRCK),
-	.o_AUD_DACDAT(AUD_DACDAT)
+	.o_AUD_DACDAT(AUD_DACDAT),
 
+	// switches
+	.i_switch_0(SW[0]),
+	.i_switch_1(SW[1]),
+	.i_switch_2(SW[2]),
+	.i_switch_3(SW[3]),
+	.i_switch_4(SW[4]),
+	.i_switch_5(SW[5]),
+	
 	// SEVENDECODER (optional display)
 	// .o_record_time(recd_time),
-	// .o_play_time(play_time),
+	.o_play_time(play_time)
 
 	// LCD (optional display)
 	// .i_clk_800k(CLK_800K),
@@ -217,11 +226,11 @@ Top top0(
 	// .o_ledr(LEDR) // [17:0]
 );
 
-// SevenHexDecoder seven_dec0(
-// 	.i_num(play_time),
-// 	.o_seven_ten(HEX1),
-// 	.o_seven_one(HEX0)
-// );
+SevenHexDecoder seven_dec0(
+	.i_hex(play_time),
+	.o_seven_ten(HEX1),
+	.o_seven_one(HEX0)
+);
 
 // SevenHexDecoder seven_dec1(
 // 	.i_num(recd_time),
@@ -230,13 +239,17 @@ Top top0(
 // );
 
 // comment those are use for display
-assign HEX0 = '1;
-assign HEX1 = '1;
+// assign HEX0 = '1;
+// assign HEX1 = '1;
 assign HEX2 = '1;
 assign HEX3 = '1;
 assign HEX4 = '1;
 assign HEX5 = '1;
 assign HEX6 = '1;
 assign HEX7 = '1;
+
+
+
+
 
 endmodule

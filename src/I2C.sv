@@ -26,7 +26,7 @@ logic [2:0] state_r, state_w;
 logic [2:0] prev_state_r, prev_state_w; // previous state for S_ACK to determine where to go next
 logic sdat; // data on i2c
 logic oen_r, oen_w; // open enable
-logic [2:0] counter_r, counter_w; // counter, every 8 bits will jump to ack state and back
+logic [3:0] counter_r, counter_w; // counter, every 8 bits will jump to ack state and back
 logic fin_r, fin_w; // finish
 
 assign o_sclk = (state_r == S_IDLE || state_r == S_START || state_r == S_STOP) ? 1'b1 : ~i_clk; // if not idle, it's the clock, otherwise, should be 1
@@ -40,6 +40,7 @@ always_comb begin
     oen_w = oen_r;
     counter_w = counter_r;
     fin_w = fin_r;
+    sdat = 1;
     case (state_r)
         // idle, not sending or reading from i2c
         S_IDLE: begin
@@ -76,7 +77,7 @@ always_comb begin
 
         // sending REG and DATA's upper 8 bit
         S_REG_DATA_UPPER: begin
-            sdat = i_reg_data[15 - counter_r];
+            sdat = i_reg_data[4'd15 - counter_r];
             counter_w = counter_r + 1'b1;
             if (counter_r == 7) begin // go to ack
                 state_w = S_ACK;
@@ -87,7 +88,7 @@ always_comb begin
 
         // sending REG and DATA's lower 8 bit
         S_REG_DATA_LOWER: begin
-            sdat = i_reg_data[7 - counter_r];
+            sdat = i_reg_data[4'd7 - counter_r];
             counter_w = counter_r + 1'b1;
             if (counter_r == 7) begin
                 state_w = S_ACK;
