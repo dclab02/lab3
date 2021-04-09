@@ -13,14 +13,14 @@ module I2C (
     output	o_oen       // you are outputing (you are not outputing only when you are "ack"ing.)
 );
 
-parameter S_IDLE     = 0;
-parameter S_ADDR     = 1;       // sending slave addr
-parameter S_RW       = 2;       // sending R/W
-parameter S_REG_DATA_UPPER = 3; // sending register and data bits
-parameter S_REG_DATA_LOWER = 4; // sending register and data bits
-parameter S_ACK      = 5;       // ack state
-parameter S_STOP     = 6;       // stop state
-parameter S_START    = 7;
+localparam S_IDLE     = 0;
+localparam S_START    = 1;       // a start state for simple delay
+localparam S_ADDR     = 2;       // sending slave addr
+localparam S_RW       = 3;       // sending R/W
+localparam S_REG_DATA_UPPER = 4; // sending register and data bits
+localparam S_REG_DATA_LOWER = 5; // sending register and data bits
+localparam S_ACK      = 6;       // ack state
+localparam S_STOP     = 7;       // stop state
 
 logic [2:0] state_r, state_w;
 logic [2:0] prev_state_r, prev_state_w; // previous state for S_ACK to determine where to go next
@@ -49,12 +49,12 @@ always_comb begin
                 state_w = S_START;
                 oen_w = 1;
                 counter_w = 0;
-                sdat = 0;
             end
         end
 
         S_START: begin
             state_w = S_ADDR;
+            sdat = 0;
         end
 
         // sending address (only 7 bit)
