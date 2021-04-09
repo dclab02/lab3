@@ -209,7 +209,7 @@ Top top0(
 	.i_switch_5(SW[5]),
 	
 	// SEVENDECODER (optional display)
-	// .o_record_time(recd_time),
+	.o_record_time(recd_time),
 	.o_play_time(play_time)
 
 	// LCD (optional display)
@@ -232,23 +232,42 @@ SevenHexDecoder seven_dec0(
 	.o_seven_one(HEX0)
 );
 
-// SevenHexDecoder seven_dec1(
-// 	.i_num(recd_time),
-// 	.o_seven_ten(HEX5),
-//  	.o_seven_one(HEX4)
-// );
+SevenHexDecoder seven_dec1(
+	.i_hex(recd_time),
+	.o_seven_ten(HEX5),
+ 	.o_seven_one(HEX4)
+);
 
 // comment those are use for display
 // assign HEX0 = '1;
 // assign HEX1 = '1;
 assign HEX2 = '1;
 assign HEX3 = '1;
-assign HEX4 = '1;
-assign HEX5 = '1;
+// assign HEX4 = '1;
+// assign HEX5 = '1;
 assign HEX6 = '1;
 assign HEX7 = '1;
 
+assign LEDR[0] = SRAM_ADDR[0];
+assign LEDR[1] = SRAM_ADDR[1];
+assign LEDR[2] = SRAM_ADDR[2];
+assign LEDR[3] = SRAM_ADDR[3];
+assign LEDR[4] = SRAM_ADDR[4];
+assign LEDR[5] = SRAM_ADDR[5];
+assign LEDR[6] = SRAM_ADDR[6];
+assign LEDR[7] = SRAM_ADDR[7];
+assign LEDR[8] = SRAM_ADDR[8];
+assign LEDR[9] = SRAM_ADDR[9];
+assign LEDR[10] = SRAM_ADDR[10];
+assign LEDR[11] = SRAM_ADDR[11];
+assign LEDR[12] = SRAM_ADDR[12];
+assign LEDR[13] = SRAM_ADDR[13];
+assign LEDR[14] = SRAM_ADDR[14];
+assign LEDR[15] = SRAM_ADDR[15];
+assign LEDR[16] = SRAM_ADDR[16];
+assign LEDR[17] = SRAM_ADDR[17];
 
+assign LEDG[8] = (AUD_ADCLRCK);
 
 
 

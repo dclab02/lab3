@@ -77,10 +77,10 @@ module tb;
         #(2*CLK)
         
         stop = 1;
-        #CLK
-        stop = 0;
+        #(CLK)
+        i_AUD_ADCLRCK = 1'b0;
+        #(20*CLK)
 
-        // @(posedge fin)
         $display("finish");
         $finish;
 	end

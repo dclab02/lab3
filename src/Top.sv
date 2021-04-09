@@ -28,7 +28,7 @@ module Top (
 	output o_AUD_DACDAT,
 
 	// SEVENDECODER (optional display)
-	// output [3:0] o_record_time,
+	output [3:0] o_record_time,
 	output [3:0] o_play_time,
 	
 	//
@@ -71,7 +71,7 @@ logic i2c_init, i2c_init_stat;
 logic recd_start, recd_pause, recd_stop;
 
 assign o_play_time = { 1'b0, state_r };
-// assign o_record_time = 4'd7;
+assign o_record_time = addr_record[3:0];
 
 //relate to DSP module
 logic play_fast, play_slow_0, play_slow_1, play_pause, play_start, play_stop;
@@ -99,19 +99,25 @@ assign play_speed 	= {i_switch_5, i_switch_4, i_switch_3};
 
 assign playing		= (state_r == S_PLAY) ? 1'b1 : 1'b0;
 
+assign recd_pause = (state_r == S_RECD_PAUSE) ? 1'b1 : 1'b0;
+assign recd_stop = (state_r == S_IDLE) ? 1'b1 : 1'b0;
+
 
 // assign o_ledg[8:0] = 8'b11111111;
 
 // === I2cInitializer ===
 // sequentially sent out settings to initialize WM8731 with I2C protocal
+
+logic [1:0] i2c_state;
 I2CInitializer init0(
 	.i_rst_n(i_rst_n),
-	.i_clk(i_clk_100K),
+	.i_clk(i_clk_100k),
 	.i_start(i2c_init),
 	.o_finished(i2c_init_stat),
 	.o_sclk(o_I2C_SCLK),
 	.o_sdat(i2c_sdat),
-	.o_oen(i2c_oen) // you are outputing (you are not outputing only when you are "ack"ing.)
+	.o_oen(i2c_oen),// you are outputing (you are not outputing only when you are "ack"ing.)
+	.o_state(i2c_state)
 );
 
 // === AudDSP ===
@@ -138,7 +144,7 @@ AudDSP dsp0(
 // receive data address from DSP and fetch data to sent to WM8731 with I2S protocal
 AudPlayer player0(
 	.i_rst_n(i_rst_n),
-	.i_bclk(i_AUD_BCLK),
+	.i_bclk(i_clk),
 	.i_daclrck(i_AUD_DACLRCK),
 	.i_en(playing), // enable AudPlayer only when playing audio, work with AudDSP
 	.i_dac_data(dac_data), //dac_data
@@ -149,7 +155,7 @@ AudPlayer player0(
 // receive data from WM8731 with I2S protocal and save to SRAM
 AudRecorder recorder0(
 	.i_rst_n(i_rst_n), 
-	.i_clk(i_AUD_BCLK),
+	.i_clk(i_clk),
 	.i_lrc(i_AUD_ADCLRCK),
 	.i_start(recd_start),
 	.i_pause(recd_pause),
@@ -162,20 +168,19 @@ AudRecorder recorder0(
 always_comb begin
 	state_w = state_r;
 	end_addr_w = end_addr_r;
-	recd_pause = 0;
 	recd_start = 0;
-	recd_stop  = 0;
+	// recd_pause = 0;
+	// recd_stop  = 0;
 	play_stop = 0;
 	play_pause = 0;
 	play_start = 0;
 	i2c_init = 0;
-	i2c_init_stat = 0;
 	
 	case (state_r)
 		S_I2C_INIT: begin
 			i2c_init = 1'b1;
 			if (i2c_init_stat) begin // init done
-				i2c_init = 1'b0;
+				// i2c_init = 1'b0;
 				state_w = S_IDLE;
 			end
 		end
@@ -191,11 +196,11 @@ always_comb begin
 		end
 		S_RECD: begin
 			if (i_key_0) begin
-				recd_pause = 1;
+				// recd_pause = 1;
 				state_w = S_RECD_PAUSE;
 			end
 			else if (i_key_2 || addr_record == 20'b1) begin
-				recd_stop = 1;
+				// recd_stop = 1;
 				state_w = S_IDLE;
 				end_addr_w = addr_record;
 			end
@@ -203,6 +208,7 @@ always_comb begin
 		S_RECD_PAUSE: begin
 			if (i_key_0) begin
 				state_w = S_RECD;
+				recd_start = 1;
 			end
 			else if (i_key_2) begin
 				end_addr_w = addr_record;
@@ -218,10 +224,10 @@ always_comb begin
 				play_stop = 1;
 				state_w = S_IDLE;
 			end
-			else if(play_addr >= end_addr_r) begin
-				play_stop = 1;
-				state_w = S_IDLE;
-			end
+			// else if(play_addr >= end_addr_r) begin
+			// 	play_stop = 1;
+			// 	state_w = S_IDLE;
+			// end
 		end
 		S_PLAY_PAUSE: begin
 			if (i_key_1) begin
