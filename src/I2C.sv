@@ -14,13 +14,15 @@ module I2C (
 );
 
 parameter S_IDLE     = 0;
-parameter S_ADDR     = 1;       // sending slave addr
-parameter S_RW       = 2;       // sending R/W
-parameter S_REG_DATA_UPPER = 3; // sending register and data bits
-parameter S_REG_DATA_LOWER = 4; // sending register and data bits
-parameter S_ACK      = 5;       // ack state
-parameter S_STOP     = 6;       // stop state
+parameter S_CAPTURE  = 1;
+parameter S_ACK      = 2;       // ack state
+parameter S_ADDR     = 3;       // sending slave addr
+parameter S_RW       = 4;       // sending R/W
+parameter S_REG_DATA_UPPER = 5; // sending register and data bits
+parameter S_REG_DATA_LOWER = 6; // sending register and data bits
+parameter S_STOP     = 7;       // stop state
 
+logic sclk_r, sclk_w; // sclk
 logic [2:0] state_r, state_w;
 logic [2:0] prev_state_r, prev_state_w; // previous state for S_ACK to determine where to go next
 logic data_r, data_w; // data on i2c
@@ -28,12 +30,14 @@ logic oen_r, oen_w; // open enable
 logic [2:0] counter_r, counter_w; // counter, every 8 bits will jump to ack state and back
 logic fin_r, fin_w; // finish
 
-assign o_sclk = (state_r == S_IDLE || state_r == S_STOP || state_r == S_ACK) ? 1'b1 : i_clk; // if not idle, it's the clock, otherwise, should be 1
+// assign o_sclk = (state_r == S_IDLE || state_r == S_STOP || state_r == S_ACK) ? 1'b1 : i_clk; // if not idle, it's the clock, otherwise, should be 1
+assign o_sclk = sclk_r;
 assign o_oen = oen_r;
 assign o_sdat = oen_r ? data_r : 1'bz;
 assign o_finished = fin_r;
 
 always_comb begin
+    sclk_w = sclk_r;
     state_w = state_r;
     prev_state_w = prev_state_r;
     data_w = data_r;
@@ -41,10 +45,12 @@ always_comb begin
     counter_w = counter_r;
     fin_w = fin_r;
     case (state_r)
+
         // idle, not sending or reading from i2c
         S_IDLE: begin
             fin_w = 0;
             data_w = 1;
+            sclk_w = 1;
             if (i_start) begin // pull down o_sdat, pull up oen_r
                 state_w = S_ADDR;
                 oen_w = 1;
@@ -53,56 +59,38 @@ always_comb begin
             end
         end
 
-        // sending address (only 7 bit)
-        S_ADDR: begin
-            data_w = i_addr[counter_r];
+        // capture, which the sclk should be 1, and should jump back
+        S_CAPTURE: begin
+            // capture data on sclk rising
+            sclk_w = 1;
+            state_w = prev_state_r;
             counter_w = counter_r + 1'b1;
-            if (counter_r == 6) state_w = S_RW;
-        end
 
-        // sending R/W (only 1 bit) to i2c, will jump to ack
-        S_RW: begin
-            data_w = i_rw;
-            if (counter_r == 7) begin // will always be 7 in this case (S_ADDR send 7 bits)
-                state_w = S_ACK;
-                prev_state_w = S_RW;
-                oen_w = 0; // for ack, output enable is false
+            if (prev_state_r == S_ADDR && counter_r == 6) begin
+                state_w = S_RW;
             end
-        end
-
-        // sending REG and DATA's upper 8 bit
-        S_REG_DATA_UPPER: begin
-            data_w = i_reg_data[counter_r];
-            counter_w = counter_r + 1'b1;
-            if (counter_r == 7) begin // go to ack
-                state_w = S_ACK;
-                prev_state_w = S_REG_DATA_UPPER;
+            if (prev_state_r == S_RW) begin
+                counter_w = 0;
+                state_w = S_ACK; // jump to ACK
                 oen_w = 0;
             end
-        end
-
-        // sending REG and DATA's lower 8 bit
-        S_REG_DATA_LOWER: begin
-            data_w = i_reg_data[counter_r];
-            counter_w = counter_r + 1'b1;
-            if (counter_r == 7) begin
-                state_w = S_ACK;
-                prev_state_w = S_REG_DATA_LOWER;
+            if (prev_state_r == S_REG_DATA_UPPER && counter_r == 7) begin
+                counter_w = 0;
+                state_w = S_ACK; // jump to ack
                 oen_w = 0;
             end
+            if (prev_state_r == S_REG_DATA_LOWER && counter_r == 7) begin
+                counter_w = 0;
+                state_w = S_ACK; // jump to ACK
+                oen_w = 0;
+            end
+
         end
 
-        // stop, pull data_w from 0 to 1, indicate stop                              
-        S_STOP: begin
-            data_w = 1;
-            state_w = S_IDLE;
-            fin_w = 1;
-        end
 
         S_ACK: begin
             // TODO: check ACK
-
-            counter_w = 0;
+            sclk_w = 1;
             if (prev_state_r == S_RW) begin
                 state_w = S_REG_DATA_UPPER;
                 oen_w = 1; // go back to output 
@@ -118,11 +106,57 @@ always_comb begin
                 oen_w = 1;
             end
         end
+
+        // sending address (only 7 bit)
+        S_ADDR: begin
+            // change data at sckl_w falling
+            sclk_w = 0;
+            data_w = i_addr[counter_r];
+            prev_state_w = S_ADDR;
+            state_w = S_CAPTURE; // jump to capture state
+        end
+
+        // sending R/W (only 1 bit) to i2c, will jump to ack
+        S_RW: begin
+            // change data at sckl_w falling
+            sclk_w = 0;
+            data_w = i_rw;
+            prev_state_w = S_RW;
+            state_w = S_CAPTURE; // jump to capture state
+        end
+
+        // sending REG and DATA's upper 8 bit
+        S_REG_DATA_UPPER: begin
+            // change data at sckl_w falling
+            sclk_w = 0;
+            data_w = i_reg_data[counter_r];
+            prev_state_w = S_REG_DATA_UPPER;
+            state_w = S_CAPTURE; // jump to capture state
+        end
+
+        // sending REG and DATA's lower 8 bit
+        S_REG_DATA_LOWER: begin
+            // change data at sckl_w falling
+            sclk_w = 0;
+            data_w = i_reg_data[counter_r + 8];
+            prev_state_w = S_REG_DATA_LOWER;
+            state_w = S_CAPTURE; // jump to capture state
+        end
+
+        // stop, pull data_w from 0 to 1, indicate stop                              
+        S_STOP: begin
+            sclk_w = 1;
+            data_w = 1;
+            state_w = S_IDLE;
+            fin_w = 1;
+        end
+
     endcase
 end
 
 always_ff @(posedge i_clk or negedge i_rst_n) begin
     if (!i_rst_n) begin
+        sclk_r <= 1;
         state_r <= S_IDLE;
         prev_state_r <= S_IDLE;
         data_r <= 1;
@@ -132,6 +166,7 @@ always_ff @(posedge i_clk or negedge i_rst_n) begin
     end
    
     else begin
+        sclk_r <= sclk_w;
         state_r <= state_w;
         prev_state_r <= prev_state_w;
         data_r <= data_w;
