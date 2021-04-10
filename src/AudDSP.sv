@@ -120,7 +120,7 @@ always_comb begin
 			end
 			else
 				interpolation_counter_w = interpolation_counter_r + 4'd1;
-				out_dac_data = ( (dac_data_r - pre_dac_data_r) / ({13'b0, i_speed} + 16'd1) ) * {12'b0, interpolation_counter_r} + pre_dac_data_r;
+				out_dac_data = $signed( ($signed(dac_data_r - pre_dac_data_r) / $signed({13'b0, i_speed} + 16'd1)) * $signed({12'b0, interpolation_counter_r}) ) + pre_dac_data_r;
 				if (interpolation_counter_r >= {1'b0, i_speed}) begin
 					interpolation_counter_w = 0;
 					interpolation_finish_w = 1'b1;

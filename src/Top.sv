@@ -242,7 +242,6 @@ end
 
 always_ff @(posedge i_clk or negedge i_rst_n) begin
 	if (!i_rst_n) begin
-		// i2c_init <= 1'b1;
         state_r <= S_I2C_INIT;
 		end_addr_r <= 0;
 	end
