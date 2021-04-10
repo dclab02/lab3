@@ -50,7 +50,7 @@ module tb;
         end
         #CLK
         i_AUD_DACLRCK = 1'b1;
-        #(20*CLK)
+        #(25*CLK)
 
         // @(posedge fin)
         $display("finish");

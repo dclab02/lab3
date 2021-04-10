@@ -85,7 +85,7 @@ assign o_SRAM_ADDR = (state_r == S_RECD) ? addr_record : play_addr;
 assign io_SRAM_DQ  = (state_r == S_RECD) ? data_record : 16'dz; // sram_dq as output
 assign play_data   = (state_r != S_RECD) ? io_SRAM_DQ : 16'd0; // sram_dq as input
 
-assign o_ledg = play_data[7:0]; // [DEBUG] This is for testing
+assign o_ledg = dac_data[7:0]; // [DEBUG] This is for testing
 
 assign o_SRAM_WE_N = (state_r == S_RECD) ? 1'b0 : 1'b1;
 assign o_SRAM_CE_N = 1'b0;
@@ -142,8 +142,8 @@ AudDSP dsp0(
 );
 
 // [DEBUG]
-logic [15:0] dac_data_tmp;
-assign dac_data_tmp = 16'd2047;
+// logic [15:0] dac_data_tmp;
+// assign dac_data_tmp = {play_addr[16],15'b0};
 
 // === AudPlayer ===
 // receive data address from DSP and fetch data to sent to WM8731 with I2S protocal
@@ -152,7 +152,7 @@ AudPlayer player0(
 	.i_bclk(i_clk),
 	.i_daclrck(i_AUD_DACLRCK),
 	.i_en(playing), // enable AudPlayer only when playing audio, work with AudDSP
-	.i_dac_data(dac_data_tmp), //dac_data
+	.i_dac_data(dac_data), //dac_data
 	.o_aud_dacdat(o_AUD_DACDAT)
 );
 

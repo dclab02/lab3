@@ -20,11 +20,12 @@ localparam S_FINISH 	= 3; // finish setup
 localparam Address = 7'b0011010; // wm8731 address
 localparam RW = 1'b0; // i2c writing (0)
 // reg and data
+// below four use default instead
+// localparam Left_Line_In 				  = 16'b0000000010010111;
+// localparam Right_Line_In 				  = 16'b0000001010010111;
+// localparam Left_Headphone_Out             = 16'b0000010001111001;
+// localparam Right_Headphone_Out            = 16'b0000011001111001;
 localparam Reset 						  = 16'b0001111000000000;
-localparam Left_Line_In 				  = 16'b0000000010010111;
-localparam Right_Line_In 				  = 16'b0000001010010111;
-localparam Left_Headphone_Out             = 16'b0000010001111001;
-localparam Right_Headphone_Out            = 16'b0000011001111001;
 localparam Analogue_Audio_Path_Control 	  = 16'b0000100000010101;
 localparam Digital_Audio_Path_Control 	  = 16'b0000101000000000;
 localparam Power_Down_Control 			  = 16'b0000110000000000;
@@ -34,7 +35,7 @@ localparam Active_Control 				  = 16'b0001001000000001;
 
 logic [1:0] state_r, state_w; // state
 logic [15:0] reg_data_r, reg_data_w; // reg and data
-logic [3:0] counter_r, counter_w; // counter from 0 to 6, which is to send reg and data
+logic [2:0] counter_r, counter_w; // counter from 0 to 6, which is to send reg and data
 logic start_r, start_w; // tell i2c module to start
 logic fin_r, fin_w;     // tell upper this initialize finished
 
@@ -78,21 +79,22 @@ always_comb begin
 		end
 
 		S_START: begin
-			if (counter_r <= 10) begin
+			if (counter_r <= 6) begin
 				start_w = 1;
 				state_w = S_SETTING;
 				case (counter_r)
 					0: begin reg_data_w = Reset; end
-					1: begin reg_data_w = Left_Line_In; end
-					2: begin reg_data_w = Right_Line_In; end
-					3: begin reg_data_w = Left_Headphone_Out; end
-					4: begin reg_data_w = Right_Headphone_Out; end  
-					5: begin reg_data_w = Analogue_Audio_Path_Control; end
-					6: begin reg_data_w = Digital_Audio_Path_Control; end
-					7: begin reg_data_w = Power_Down_Control; end
-					8: begin reg_data_w = Digital_Audio_Interface_Format; end
-					9: begin reg_data_w = Sampling_Control; end
-					10: begin reg_data_w = Active_Control; end
+					// below four use default instead
+					// 1: begin reg_data_w = Left_Line_In; end
+					// 2: begin reg_data_w = Right_Line_In; end
+					// 3: begin reg_data_w = Left_Headphone_Out; end
+					// 4: begin reg_data_w = Right_Headphone_Out; end  
+					1: begin reg_data_w = Analogue_Audio_Path_Control; end
+					2: begin reg_data_w = Digital_Audio_Path_Control; end
+					3: begin reg_data_w = Power_Down_Control; end
+					4: begin reg_data_w = Digital_Audio_Interface_Format; end
+					5: begin reg_data_w = Sampling_Control; end
+					6: begin reg_data_w = Active_Control; end
 					default: begin
 						reg_data_w = Reset;
 					end
@@ -107,7 +109,7 @@ always_comb begin
 			start_w = 1'b0; // pull down start for i2c module to work correctly
 			if (i2c_fin) begin // i2c will pull this up when finished, then pull this down
 				state_w = S_START;
-				counter_w = counter_r + 1'b1;
+				counter_w = counter_r + 3'b1;
 			end
 		end
 		
