@@ -32,22 +32,22 @@ module Top (
 	output [5:0] o_play_time,
 	output [5:0] o_state,
 	
-	//
+	// functional select switch
 	input i_switch_0, // slow_0
 	input i_switch_1, // slow_1
 	input i_switch_2, // fast
 	input i_switch_3, // bit[0]
 	input i_switch_4, // bit[1]
-	input i_switch_5  // bit[2]
+	input i_switch_5, // bit[2]
 
 	// LCD (optional display)
-	// input        i_clk_800k,
-	// inout  [7:0] o_LCD_DATA,
-	// output       o_LCD_EN,
-	// output       o_LCD_RS,
-	// output       o_LCD_RW,
-	// output       o_LCD_ON,
-	// output       o_LCD_BLON,
+	input        i_clk_800k,
+	inout  [7:0] o_LCD_DATA,
+	output       o_LCD_EN,
+	output       o_LCD_RS,
+	output       o_LCD_RW,
+	output       o_LCD_ON,
+	output       o_LCD_BLON
 
 	// LED
 	// output  [7:0] o_ledg
@@ -97,11 +97,11 @@ assign play_slow_1 	= i_switch_1;
 assign play_fast	= i_switch_2;
 assign play_speed 	= {i_switch_5, i_switch_4, i_switch_3};
 
-assign playing		= (state_r == S_PLAY) ? 1'b1 : 1'b0;
-assign recd_pause = (state_r == S_RECD_PAUSE) ? 1'b1 : 1'b0;
-assign recd_stop = (state_r == S_IDLE) ? 1'b1 : 1'b0;
-assign play_pause = (state_r == S_PLAY_PAUSE) ? 1'b1 : 1'b0;
-assign play_stop = (state_r == S_IDLE) ? 1'b1 : 1'b0;
+assign playing     = (state_r == S_PLAY) ? 1'b1 : 1'b0;
+assign recd_pause  = (state_r == S_RECD_PAUSE) ? 1'b1 : 1'b0;
+assign recd_stop   = (state_r == S_IDLE) ? 1'b1 : 1'b0;
+assign play_pause  = (state_r == S_PLAY_PAUSE) ? 1'b1 : 1'b0;
+assign play_stop   = (state_r == S_IDLE) ? 1'b1 : 1'b0;
 
 // hex display
 // timer
@@ -177,6 +177,24 @@ AudRecorder recorder0(
 	.o_data(data_record)
 );
 
+// === AudLCD ===
+// LCD display
+AudLCD disp0(
+	.i_rst_n(i_rst_n),
+    .i_clk(i_clk_800k),
+    .i_state(state_r),
+    .i_speed(play_speed),
+    .i_fast(),
+	.i_interpolation(),
+
+    .o_LCD_DATA(o_LCD_DATA),
+    .o_LCD_EN(o_LCD_EN),
+    .o_LCD_RS(o_LCD_RS),
+    .o_LCD_RW(o_LCD_RW),
+    .o_LCD_ON(o_LCD_ON),
+    .o_LCD_BLON(o_LCD_BLON)
+);
+
 always_comb begin
 	state_w = state_r;
 	end_addr_w = end_addr_r;
@@ -186,7 +204,6 @@ always_comb begin
 	play_start = 0;
 	i2c_init = 0;
 
-	
 	case (state_r)
 		S_I2C_INIT: begin
 			i2c_init = 1'b1;

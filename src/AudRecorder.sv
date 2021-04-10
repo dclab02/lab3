@@ -70,7 +70,6 @@ always_comb begin
 		S_FINISHED: begin
 			audio_addr_w = audio_addr_r + 1'b1;
 			data_cnt_w = 4'b0;
-			// aud_data_w = 16'b0; // reset audio data
 			finish_w = 1'b1;
 			state_w = S_WAITING;
 

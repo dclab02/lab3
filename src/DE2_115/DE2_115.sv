@@ -211,16 +211,16 @@ Top top0(
 	// SEVENDECODER (optional display)
 	.o_record_time(recd_time),
 	.o_play_time(play_time),
-	.o_state(top_state)
+	.o_state(top_state),
 
 	// LCD (optional display)
-	// .i_clk_800k(CLK_800K),
-	// .o_LCD_DATA(LCD_DATA), // [7:0]
-	// .o_LCD_EN(LCD_EN),
-	// .o_LCD_RS(LCD_RS),
-	// .o_LCD_RW(LCD_RW),
-	// .o_LCD_ON(LCD_ON),
-	// .o_LCD_BLON(LCD_BLON),
+	.i_clk_800k(CLK_100K),
+	.o_LCD_DATA(LCD_DATA), // [7:0]
+	.o_LCD_EN(LCD_EN),
+	.o_LCD_RS(LCD_RS),
+	.o_LCD_RW(LCD_RW),
+	.o_LCD_ON(LCD_ON),
+	.o_LCD_BLON(LCD_BLON)
 
 	// LED
 	// .o_ledg(LEDG[7:0]), // [8:0]
