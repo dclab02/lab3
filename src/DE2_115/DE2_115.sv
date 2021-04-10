@@ -138,7 +138,7 @@ module DE2_115 (
 
 logic key0down, key1down, key2down, key3down;
 logic CLK_12M, CLK_100K, CLK_800K;
-logic [3:0] play_time, recd_time;
+logic [5:0] play_time, recd_time, top_state;
 
 assign AUD_XCK = CLK_12M;
 
@@ -211,6 +211,7 @@ Top top0(
 	// SEVENDECODER (optional display)
 	.o_record_time(recd_time),
 	.o_play_time(play_time),
+	.o_state(top_state)
 
 	// LCD (optional display)
 	// .i_clk_800k(CLK_800K),
@@ -222,21 +223,28 @@ Top top0(
 	// .o_LCD_BLON(LCD_BLON),
 
 	// LED
-	.o_ledg(LEDG[7:0]), // [8:0]
+	// .o_ledg(LEDG[7:0]), // [8:0]
 	// .o_ledr(LEDR) // [17:0]
 );
 
 SevenHexDecoder seven_dec0(
-	.i_hex(play_time),
-	.o_seven_ten(HEX1),
-	.o_seven_one(HEX0)
+	.i_num(play_time),
+	.o_seven_ten(HEX7),
+	.o_seven_one(HEX6)
 );
 
 SevenHexDecoder seven_dec1(
-	.i_hex(recd_time),
+	.i_num(recd_time),
 	.o_seven_ten(HEX5),
  	.o_seven_one(HEX4)
 );
+
+SevenHexDecoder seven_dec2(
+	.i_num(top_state),
+	.o_seven_ten(HEX1),
+ 	.o_seven_one(HEX0)
+);
+
 
 // comment those are use for display
 // assign HEX0 = '1;
@@ -245,8 +253,8 @@ assign HEX2 = '1;
 assign HEX3 = '1;
 // assign HEX4 = '1;
 // assign HEX5 = '1;
-assign HEX6 = '1;
-assign HEX7 = '1;
+// assign HEX6 = '1;
+// assign HEX7 = '1;
 
 assign LEDR[0] = SRAM_ADDR[0];
 assign LEDR[1] = SRAM_ADDR[1];
@@ -268,7 +276,5 @@ assign LEDR[16] = SRAM_ADDR[16];
 assign LEDR[17] = SRAM_ADDR[17];
 
 assign LEDG[8] = AUD_ADCLRCK;  // [DEBUG] This is for testing
-
-
 
 endmodule

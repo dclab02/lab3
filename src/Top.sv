@@ -28,8 +28,9 @@ module Top (
 	output o_AUD_DACDAT,
 
 	// SEVENDECODER (optional display)
-	output [3:0] o_record_time,
-	output [3:0] o_play_time,
+	output [5:0] o_record_time,
+	output [5:0] o_play_time,
+	output [5:0] o_state,
 	
 	//
 	input i_switch_0, // slow_0
@@ -37,7 +38,7 @@ module Top (
 	input i_switch_2, // fast
 	input i_switch_3, // bit[0]
 	input i_switch_4, // bit[1]
-	input i_switch_5,  // bit[2]
+	input i_switch_5  // bit[2]
 
 	// LCD (optional display)
 	// input        i_clk_800k,
@@ -49,7 +50,7 @@ module Top (
 	// output       o_LCD_BLON,
 
 	// LED
-	output  [7:0] o_ledg
+	// output  [7:0] o_ledg
 	// output [17:0] o_ledr
 );
 
@@ -70,9 +71,6 @@ logic [15:0] data_record, play_data, dac_data;
 logic i2c_init, i2c_init_stat;
 logic recd_start, recd_pause, recd_stop;
 
-assign o_play_time = { 1'b0, state_r };  // [DEBUG] This is for testing
-assign o_record_time = addr_record[3:0];  // [DEBUG] This is for testing
-
 //relate to DSP module
 logic play_fast, play_slow_0, play_slow_1, play_pause, play_start, play_stop;
 logic [2:0] play_speed;
@@ -85,7 +83,7 @@ assign o_SRAM_ADDR = (state_r == S_RECD) ? addr_record : play_addr;
 assign io_SRAM_DQ  = (state_r == S_RECD) ? data_record : 16'dz; // sram_dq as output
 assign play_data   = (state_r != S_RECD) ? io_SRAM_DQ : 16'd0; // sram_dq as input
 
-assign o_ledg = dac_data[7:0]; // [DEBUG] This is for testing
+// assign o_ledg = dac_data[7:0]; // [DEBUG] This is for testing
 
 assign o_SRAM_WE_N = (state_r == S_RECD) ? 1'b0 : 1'b1;
 assign o_SRAM_CE_N = 1'b0;
@@ -104,6 +102,15 @@ assign recd_pause = (state_r == S_RECD_PAUSE) ? 1'b1 : 1'b0;
 assign recd_stop = (state_r == S_IDLE) ? 1'b1 : 1'b0;
 assign play_pause = (state_r == S_PLAY_PAUSE) ? 1'b1 : 1'b0;
 assign play_stop = (state_r == S_IDLE) ? 1'b1 : 1'b0;
+
+// hex display
+// timer
+logic [5:0] recd_sec_r, recd_sec_w;
+logic [23:0] recd_counter_r, recd_counter_w;
+assign o_record_time = recd_sec_r;
+assign o_play_time =  { 1'b0, play_addr[19:15] }; // to adjust with quick and slow play, so set by play_addr
+// state
+assign o_state = state_r;
 
 
 // === I2cInitializer ===
@@ -149,7 +156,7 @@ AudDSP dsp0(
 // receive data address from DSP and fetch data to sent to WM8731 with I2S protocal
 AudPlayer player0(
 	.i_rst_n(i_rst_n),
-	.i_bclk(i_clk),
+	.i_bclk(i_AUD_BCLK),
 	.i_daclrck(i_AUD_DACLRCK),
 	.i_en(playing), // enable AudPlayer only when playing audio, work with AudDSP
 	.i_dac_data(dac_data), //dac_data
@@ -160,7 +167,7 @@ AudPlayer player0(
 // receive data from WM8731 with I2S protocal and save to SRAM
 AudRecorder recorder0(
 	.i_rst_n(i_rst_n), 
-	.i_clk(i_clk),
+	.i_clk(i_AUD_BCLK),
 	.i_lrc(i_AUD_ADCLRCK),
 	.i_start(recd_start),
 	.i_pause(recd_pause),
@@ -173,9 +180,12 @@ AudRecorder recorder0(
 always_comb begin
 	state_w = state_r;
 	end_addr_w = end_addr_r;
+	recd_counter_w = recd_counter_r;
+	recd_sec_w = recd_sec_r;
 	recd_start = 0;
 	play_start = 0;
 	i2c_init = 0;
+
 	
 	case (state_r)
 		S_I2C_INIT: begin
@@ -185,7 +195,8 @@ always_comb begin
 				state_w = S_IDLE;
 			end
 		end
-		S_IDLE: begin			
+		S_IDLE: begin		
+			recd_sec_w = 6'b0;
 			if (i_key_0) begin // start recording
 				recd_start = 1;
 				state_w = S_RECD;
@@ -196,6 +207,12 @@ always_comb begin
 			end
 		end
 		S_RECD: begin
+			recd_counter_w = recd_counter_r + 24'b1;
+			if (recd_counter_r == 24'd12000000) begin
+				recd_counter_w = 24'b0;
+				recd_sec_w = recd_sec_r + 6'b1;
+			end
+
 			if (i_key_0) begin
 				state_w = S_RECD_PAUSE;
 			end
@@ -244,10 +261,14 @@ always_ff @(posedge i_clk or negedge i_rst_n) begin
 	if (!i_rst_n) begin
         state_r <= S_I2C_INIT;
 		end_addr_r <= 0;
+		recd_sec_r <= 0;
+		recd_counter_r <= 0;
 	end
 	else begin
         state_r <= state_w;
 		end_addr_r <= end_addr_w;
+		recd_sec_r <= recd_sec_w;
+		recd_counter_r <= recd_counter_w;
 	end
 end
 
