@@ -210,7 +210,7 @@ Top top0(
 	
 	// SEVENDECODER (optional display)
 	.o_record_time(recd_time),
-	.o_play_time(play_time)
+	.o_play_time(play_time),
 
 	// LCD (optional display)
 	// .i_clk_800k(CLK_800K),
@@ -222,7 +222,7 @@ Top top0(
 	// .o_LCD_BLON(LCD_BLON),
 
 	// LED
-	// .o_ledg(LEDG), // [8:0]
+	.o_ledg(LEDG[7:0]), // [8:0]
 	// .o_ledr(LEDR) // [17:0]
 );
 
@@ -267,7 +267,7 @@ assign LEDR[15] = SRAM_ADDR[15];
 assign LEDR[16] = SRAM_ADDR[16];
 assign LEDR[17] = SRAM_ADDR[17];
 
-assign LEDG[8] = (AUD_ADCLRCK);
+assign LEDG[8] = AUD_ADCLRCK;  // [DEBUG] This is for testing
 
 
 

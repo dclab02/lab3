@@ -61,7 +61,7 @@ always_comb begin
 		S_RECORDING: begin
 			aud_data_w = aud_data_r << 1;
 			// aud_data_w[0] = i_data;
-			aud_data_w[0] = 1; // This is for testing
+			aud_data_w[0] = data_cnt_r[0]; // [DEBUG] This is for testing
 			data_cnt_w = data_cnt_r + 1'b1;
 			if (data_cnt_r == 15) begin
 				state_w = S_FINISHED;

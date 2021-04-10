@@ -37,7 +37,7 @@ module Top (
 	input i_switch_2, // fast
 	input i_switch_3, // bit[0]
 	input i_switch_4, // bit[1]
-	input i_switch_5  // bit[2]
+	input i_switch_5,  // bit[2]
 
 	// LCD (optional display)
 	// input        i_clk_800k,
@@ -49,7 +49,7 @@ module Top (
 	// output       o_LCD_BLON,
 
 	// LED
-	// output  [8:0] o_ledg,
+	output  [7:0] o_ledg
 	// output [17:0] o_ledr
 );
 
@@ -70,8 +70,8 @@ logic [15:0] data_record, play_data, dac_data;
 logic i2c_init, i2c_init_stat;
 logic recd_start, recd_pause, recd_stop;
 
-assign o_play_time = { 1'b0, state_r };
-assign o_record_time = addr_record[3:0];
+assign o_play_time = { 1'b0, state_r };  // [DEBUG] This is for testing
+assign o_record_time = addr_record[3:0];  // [DEBUG] This is for testing
 
 //relate to DSP module
 logic play_fast, play_slow_0, play_slow_1, play_pause, play_start, play_stop;
@@ -81,9 +81,11 @@ logic playing;
 
 assign io_I2C_SDAT = (i2c_oen) ? i2c_sdat : 1'bz;
 
-assign o_SRAM_ADDR = (state_r == S_RECD) ? addr_record : play_addr[19:0];
+assign o_SRAM_ADDR = (state_r == S_RECD) ? addr_record : play_addr;
 assign io_SRAM_DQ  = (state_r == S_RECD) ? data_record : 16'dz; // sram_dq as output
 assign play_data   = (state_r != S_RECD) ? io_SRAM_DQ : 16'd0; // sram_dq as input
+
+assign o_ledg = play_data[7:0]; // [DEBUG] This is for testing
 
 assign o_SRAM_WE_N = (state_r == S_RECD) ? 1'b0 : 1'b1;
 assign o_SRAM_CE_N = 1'b0;
@@ -98,12 +100,11 @@ assign play_fast	= i_switch_2;
 assign play_speed 	= {i_switch_5, i_switch_4, i_switch_3};
 
 assign playing		= (state_r == S_PLAY) ? 1'b1 : 1'b0;
-
 assign recd_pause = (state_r == S_RECD_PAUSE) ? 1'b1 : 1'b0;
 assign recd_stop = (state_r == S_IDLE) ? 1'b1 : 1'b0;
+assign play_pause = (state_r == S_PLAY_PAUSE) ? 1'b1 : 1'b0;
+assign play_stop = (state_r == S_IDLE) ? 1'b1 : 1'b0;
 
-
-// assign o_ledg[8:0] = 8'b11111111;
 
 // === I2cInitializer ===
 // sequentially sent out settings to initialize WM8731 with I2C protocal
@@ -140,6 +141,10 @@ AudDSP dsp0(
 	.o_sram_addr(play_addr)
 );
 
+// [DEBUG]
+logic [15:0] dac_data_tmp;
+assign dac_data_tmp = 16'd2047;
+
 // === AudPlayer ===
 // receive data address from DSP and fetch data to sent to WM8731 with I2S protocal
 AudPlayer player0(
@@ -147,7 +152,7 @@ AudPlayer player0(
 	.i_bclk(i_clk),
 	.i_daclrck(i_AUD_DACLRCK),
 	.i_en(playing), // enable AudPlayer only when playing audio, work with AudDSP
-	.i_dac_data(dac_data), //dac_data
+	.i_dac_data(dac_data_tmp), //dac_data
 	.o_aud_dacdat(o_AUD_DACDAT)
 );
 
@@ -169,10 +174,6 @@ always_comb begin
 	state_w = state_r;
 	end_addr_w = end_addr_r;
 	recd_start = 0;
-	// recd_pause = 0;
-	// recd_stop  = 0;
-	play_stop = 0;
-	play_pause = 0;
 	play_start = 0;
 	i2c_init = 0;
 	
@@ -180,7 +181,7 @@ always_comb begin
 		S_I2C_INIT: begin
 			i2c_init = 1'b1;
 			if (i2c_init_stat) begin // init done
-				// i2c_init = 1'b0;
+				i2c_init = 1'b0;
 				state_w = S_IDLE;
 			end
 		end
@@ -196,11 +197,9 @@ always_comb begin
 		end
 		S_RECD: begin
 			if (i_key_0) begin
-				// recd_pause = 1;
 				state_w = S_RECD_PAUSE;
 			end
-			else if (i_key_2 || addr_record == 20'b1) begin
-				// recd_stop = 1;
+			else if (i_key_2 || addr_record == 20'b11111111111111111111) begin
 				state_w = S_IDLE;
 				end_addr_w = addr_record;
 			end
@@ -217,24 +216,21 @@ always_comb begin
 		end
 		S_PLAY: begin
 			if (i_key_1) begin
-				play_pause = 1;
 				state_w = S_PLAY_PAUSE;
 			end
 			else if (i_key_2) begin
-				play_stop = 1;
 				state_w = S_IDLE;
 			end
-			// else if(play_addr >= end_addr_r) begin
-			// 	play_stop = 1;
-			// 	state_w = S_IDLE;
-			// end
+			else if(play_addr >= end_addr_r) begin
+				state_w = S_IDLE;
+			end
 		end
 		S_PLAY_PAUSE: begin
 			if (i_key_1) begin
 				state_w = S_PLAY;
+				play_start = 1;
 			end
 			else if (i_key_2) begin
-				play_stop = 1;
 				state_w = S_IDLE; 
 			end
 		end

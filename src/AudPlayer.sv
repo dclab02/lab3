@@ -8,8 +8,9 @@ module AudPlayer (
 );
 
 localparam S_IDLE      = 0;
-localparam S_PLAYING   = 1;
-localparam S_FINISHED  = 2;
+localparam S_WAITING   = 1;
+localparam S_PLAYING   = 2;
+localparam S_FINISHED  = 3;
 
 logic [1:0] state_r, state_w;
 logic [15:0] aud_data_r, aud_data_w;
@@ -23,19 +24,19 @@ always_comb begin
 	state_w = state_r;
 	aud_data_w = aud_data_r;
 	data_cnt_w = data_cnt_r;
-	// aud_data_r = 16'b0;
 	case (state_r)
 		S_IDLE: begin
 			if (i_en && !i_daclrck) begin
-				// playing = 1'b1;
-				aud_data_w = i_dac_data;
-				state_w = S_PLAYING;
+				state_w = S_WAITING;
 			end 
+		end
+		S_WAITING: begin
+			aud_data_w = i_dac_data;
+			state_w = S_PLAYING;
 		end
 		S_PLAYING: begin
 			if (data_cnt_r == 15) begin
 				data_cnt_w = 3'b0;
-				// playing = 1'b0;
 				state_w = S_IDLE;
 			end
 			else begin
@@ -53,7 +54,6 @@ always_ff @(posedge i_bclk or negedge i_rst_n) begin
 		state_r <= S_IDLE;
 		data_cnt_r <= 3'b0;
 		aud_data_r <= 16'b0;
-		// audio_data <= 16'b0;
 	end
 	else begin
 		state_r <= state_w;
