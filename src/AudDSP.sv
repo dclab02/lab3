@@ -80,7 +80,7 @@ always_comb begin
 				dac_data_w = i_sram_data;
 				pre_dac_data_w = dac_data_r;
 				addr_counter_w = i_fast ? addr_counter_r + {16'b0, {1'b0, i_speed} + 4'd1} : addr_counter_r + 20'd1;
-				if (addr_counter_r == i_end_addr) begin
+				if (addr_counter_r >= i_end_addr) begin
 					state_w = S_IDLE;
 				end
 				else if (i_pause) begin

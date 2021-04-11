@@ -207,6 +207,7 @@ Top top0(
 	.i_switch_3(SW[3]),
 	.i_switch_4(SW[4]),
 	.i_switch_5(SW[5]),
+	.i_switch_6(SW[6]),
 	
 	// SEVENDECODER (optional display)
 	.o_record_time(recd_time),

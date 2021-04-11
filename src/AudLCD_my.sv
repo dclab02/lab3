@@ -3,7 +3,6 @@ module AudLCD (
     input i_clk,        
     input [2:0] i_state,
     input [3:0] i_speed,
-    input i_fast,
     input i_interpolation,
     
     output [7:0] o_LCD_DATA,
@@ -79,6 +78,9 @@ parameter CGRAM_y  = 8'h79;
 parameter CGRAM_z  = 8'h7A;
 
 // Upper case
+parameter CGRAM_BIG_F     = 8'h46;
+parameter CGRAM_BIG_M     = 8'h4D;
+parameter CGRAM_BIG_N     = 8'h4E;
 parameter CGRAM_BIG_P     = 8'h50;
 parameter CGRAM_BIG_R     = 8'h52;
 parameter CGRAM_BIG_S     = 8'h53;
@@ -294,7 +296,7 @@ always_comb begin
                     8  : data_w = CGRAM_DOT;
                     9  : data_w = CGRAM_DOT;
                     16 : data_w = ENTER;
-                    17 : data_w = (i_speed == 0 || i_speed == 8)? CGRAM_n:(i_speed[3])? CGRAM_f : CGRAM_s;
+                    17 : data_w = (i_speed == 0 || i_speed == 8)? CGRAM_BIG_N : (i_speed[3]) ? CGRAM_BIG_F : CGRAM_BIG_S;
                     18 : data_w = (i_speed == 0 || i_speed == 8)? CGRAM_o:(i_speed[3])? CGRAM_a : CGRAM_l;
                     19 : data_w = (i_speed == 0 || i_speed == 8)? CGRAM_r:(i_speed[3])? CGRAM_s : CGRAM_o;
                     20 : data_w = (i_speed == 0 || i_speed == 8)? CGRAM_m:(i_speed[3])? CGRAM_t : CGRAM_w;
@@ -323,9 +325,9 @@ always_comb begin
                             7,15 : data_w = CGRAM_8;
                         endcase
                     end
-                    25 : data_w = CGRAM_BIG_X;
+                    25 : data_w = CGRAM_x;
                     26 : data_w = (i_speed>7 || i_speed == 0)? CGRAM_BLANK: CGRAM_COMMA;
-                    27 : data_w = (i_speed>7 || i_speed == 0)? CGRAM_BLANK: CGRAM_m;
+                    27 : data_w = (i_speed>7 || i_speed == 0)? CGRAM_BLANK: CGRAM_BIG_M;
                     28 : data_w = (i_speed>7 || i_speed == 0)? CGRAM_BLANK: CGRAM_o;
                     29 : data_w = (i_speed>7 || i_speed == 0)? CGRAM_BLANK: CGRAM_d;
                     30 : data_w = (i_speed>7 || i_speed == 0)? CGRAM_BLANK: CGRAM_e;
@@ -361,7 +363,7 @@ always_comb begin
                     7  : data_w = CGRAM_s;
                     8  : data_w = CGRAM_e;
                     16 : data_w = ENTER;
-                    17 : data_w = (i_speed == 0 || i_speed == 8)? CGRAM_n:(i_speed[3])? CGRAM_f : CGRAM_s;
+                    17 : data_w = (i_speed == 0 || i_speed == 8)? CGRAM_BIG_N : (i_speed[3])? CGRAM_BIG_F : CGRAM_BIG_S;
                     18 : data_w = (i_speed == 0 || i_speed == 8)? CGRAM_o:(i_speed[3])? CGRAM_a : CGRAM_l;
                     19 : data_w = (i_speed == 0 || i_speed == 8)? CGRAM_r:(i_speed[3])? CGRAM_s : CGRAM_o;
                     20 : data_w = (i_speed == 0 || i_speed == 8)? CGRAM_m:(i_speed[3])? CGRAM_t : CGRAM_w;
@@ -380,8 +382,8 @@ always_comb begin
                     end
                     24 : begin
                         case(i_speed)
-                            0,8 : data_w = CGRAM_1;
-                            1,9 : data_w = CGRAM_2;
+                            0,8  : data_w = CGRAM_1;
+                            1,9  : data_w = CGRAM_2;
                             2,10 : data_w = CGRAM_3;
                             3,11 : data_w = CGRAM_4;
                             4,12 : data_w = CGRAM_5;
@@ -427,7 +429,7 @@ always_comb begin
                     6  : data_w = CGRAM_o;
                     7  : data_w = CGRAM_p;
                     16 : data_w = ENTER;
-                    17 : data_w = (i_speed == 0 || i_speed == 8)? CGRAM_n:(i_speed[3])? CGRAM_f : CGRAM_s;
+                    17 : data_w = (i_speed == 0 || i_speed == 8)? CGRAM_BIG_N : (i_speed[3])? CGRAM_BIG_F : CGRAM_BIG_S;
                     18 : data_w = (i_speed == 0 || i_speed == 8)? CGRAM_o:(i_speed[3])? CGRAM_a : CGRAM_l;
                     19 : data_w = (i_speed == 0 || i_speed == 8)? CGRAM_r:(i_speed[3])? CGRAM_s : CGRAM_o;
                     20 : data_w = (i_speed == 0 || i_speed == 8)? CGRAM_m:(i_speed[3])? CGRAM_t : CGRAM_w;
@@ -458,7 +460,7 @@ always_comb begin
                     end
                     25 : data_w = CGRAM_BIG_X;
                     26 : data_w = (i_speed > 7 || i_speed == 0)? CGRAM_BLANK: CGRAM_COMMA;
-                    27 : data_w = (i_speed > 7 || i_speed == 0)? CGRAM_BLANK: CGRAM_m;
+                    27 : data_w = (i_speed > 7 || i_speed == 0)? CGRAM_BLANK: CGRAM_BIG_M;
                     28 : data_w = (i_speed > 7 || i_speed == 0)? CGRAM_BLANK: CGRAM_o;
                     29 : data_w = (i_speed > 7 || i_speed == 0)? CGRAM_BLANK: CGRAM_d;
                     30 : data_w = (i_speed > 7 || i_speed == 0)? CGRAM_BLANK: CGRAM_e;

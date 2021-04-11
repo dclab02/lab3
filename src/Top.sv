@@ -39,6 +39,7 @@ module Top (
 	input i_switch_3, // bit[0]
 	input i_switch_4, // bit[1]
 	input i_switch_5, // bit[2]
+	input i_switch_6, // repeat
 
 	// LCD (optional display)
 	input        i_clk_800k,
@@ -61,6 +62,7 @@ localparam S_RECD       = 2;
 localparam S_RECD_PAUSE = 3;
 localparam S_PLAY       = 4;
 localparam S_PLAY_PAUSE = 5;
+localparam S_PLAY_REPEAT = 6;
 
 logic [2:0] state_r, state_w;
 logic i2c_oen;
@@ -72,7 +74,7 @@ logic i2c_init, i2c_init_stat;
 logic recd_start, recd_pause, recd_stop;
 
 //relate to DSP module
-logic play_fast, play_slow_0, play_slow_1, play_pause, play_start, play_stop;
+logic play_fast, play_slow_0, play_slow_1, play_pause, play_start, play_stop, play_repeat;
 logic [2:0] play_speed;
 logic [19:0] end_addr_r, end_addr_w;
 logic playing;
@@ -96,12 +98,14 @@ assign play_slow_0 	= i_switch_0;
 assign play_slow_1 	= i_switch_1;
 assign play_fast	= i_switch_2;
 assign play_speed 	= {i_switch_5, i_switch_4, i_switch_3};
+assign play_repeat = i_switch_6;
 
 assign playing     = (state_r == S_PLAY) ? 1'b1 : 1'b0;
 assign recd_pause  = (state_r == S_RECD_PAUSE) ? 1'b1 : 1'b0;
 assign recd_stop   = (state_r == S_IDLE) ? 1'b1 : 1'b0;
 assign play_pause  = (state_r == S_PLAY_PAUSE) ? 1'b1 : 1'b0;
 assign play_stop   = (state_r == S_IDLE) ? 1'b1 : 1'b0;
+assign play_start  = (state_r == S_PLAY) ? 1'b1 : 1'b0;
 
 // hex display
 // timer
@@ -109,9 +113,16 @@ logic [5:0] recd_sec_r, recd_sec_w;
 logic [23:0] recd_counter_r, recd_counter_w;
 assign o_record_time = recd_sec_r;
 assign o_play_time =  { 1'b0, play_addr[19:15] }; // to adjust with quick and slow play, so set by play_addr
+
 // state
 assign o_state = state_r;
 
+// lcd display use
+logic display_interpolation;
+logic [3:0] display_speed;
+assign display_interpolation = (play_slow_1) ? 1'b1 : 1'b0;
+assign display_speed[3] = (play_fast) ? 1'b1 : 1'b0;
+assign display_speed[2:0] = play_speed;
 
 // === I2cInitializer ===
 // sequentially sent out settings to initialize WM8731 with I2C protocal
@@ -183,9 +194,8 @@ AudLCD disp0(
 	.i_rst_n(i_rst_n),
     .i_clk(i_clk_800k),
     .i_state(state_r),
-    .i_speed(play_speed),
-    .i_fast(),
-	.i_interpolation(),
+    .i_speed(display_speed),
+	.i_interpolation(display_interpolation),
 
     .o_LCD_DATA(o_LCD_DATA),
     .o_LCD_EN(o_LCD_EN),
@@ -201,7 +211,7 @@ always_comb begin
 	recd_counter_w = recd_counter_r;
 	recd_sec_w = recd_sec_r;
 	recd_start = 0;
-	play_start = 0;
+	// play_start = 0;
 	i2c_init = 0;
 
 	case (state_r)
@@ -219,7 +229,7 @@ always_comb begin
 				state_w = S_RECD;
 			end
 			if (i_key_1) begin // start playing
-				play_start = 1;
+				// play_start = 1;
 				state_w = S_PLAY;
 			end
 		end
@@ -256,17 +266,25 @@ always_comb begin
 				state_w = S_IDLE;
 			end
 			else if(play_addr >= end_addr_r) begin
-				state_w = S_IDLE;
+				if(play_repeat) begin
+					state_w = S_PLAY_REPEAT;
+				end
+				else begin
+					state_w = S_IDLE;
+				end
 			end
 		end
 		S_PLAY_PAUSE: begin
 			if (i_key_1) begin
-				state_w = S_PLAY;
-				play_start = 1;
+				state_w = S_PLAY_REPEAT;
+				// play_start = 1;
 			end
 			else if (i_key_2) begin
 				state_w = S_IDLE; 
 			end
+		end
+		S_PLAY_REPEAT: begin
+			state_w = S_PLAY;
 		end
 
 		default: 
