@@ -208,12 +208,12 @@ Top top0(
 	.i_switch_4(SW[4]),
 	.i_switch_5(SW[5]),
 	.i_switch_6(SW[6]),
-	
+
 	// SEVENDECODER (optional display)
 	.o_record_time(recd_time),
 	.o_play_time(play_time),
 	.o_state(top_state),
-
+	// .o_state_dsp(dsp_state),
 	// LCD (optional display)
 	.i_clk_800k(CLK_100K),
 	.o_LCD_DATA(LCD_DATA), // [7:0]
@@ -221,10 +221,10 @@ Top top0(
 	.o_LCD_RS(LCD_RS),
 	.o_LCD_RW(LCD_RW),
 	.o_LCD_ON(LCD_ON),
-	.o_LCD_BLON(LCD_BLON)
+	.o_LCD_BLON(LCD_BLON),
 
 	// LED
-	// .o_ledg(LEDG[7:0]), // [8:0]
+	.o_ledg(LEDG[8:0]), // [8:0]
 	// .o_ledr(LEDR) // [17:0]
 );
 
@@ -240,12 +240,18 @@ SevenHexDecoder seven_dec1(
  	.o_seven_one(HEX4)
 );
 
+
 SevenHexDecoder seven_dec2(
 	.i_num(top_state),
 	.o_seven_ten(HEX1),
  	.o_seven_one(HEX0)
 );
 
+// SevenHexDecoder seven_dec3(
+// 	.i_num(dsp_state),
+// 	.o_seven_ten(HEX3),
+// 	.o_seven_one(HEX2)
+// );
 
 // comment those are use for display
 // assign HEX0 = '1;
@@ -276,6 +282,5 @@ assign LEDR[15] = SRAM_ADDR[15];
 assign LEDR[16] = SRAM_ADDR[16];
 assign LEDR[17] = SRAM_ADDR[17];
 
-assign LEDG[8] = AUD_ADCLRCK;  // [DEBUG] This is for testing
 
 endmodule

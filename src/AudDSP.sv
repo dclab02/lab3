@@ -15,15 +15,18 @@ module AudDSP (
 	input   [15:0] i_sram_data,
 	input	[19:0] i_end_addr, // end address
 	output  [15:0] o_dac_data,
-	output  [19:0] o_sram_addr
+	output  [19:0] o_sram_addr,
+	output [2:0]   o_state  // [debug]
 );
 
-localparam S_IDLE 	= 0;
-localparam S_RUN 	= 1;
-localparam S_WAIT_0 = 2;
-localparam S_WAIT_1 = 3;
-localparam S_PAUSE	= 4;
-localparam S_WAIT_NEGEDGE = 5;
+
+localparam S_IDLE 	= 3'd0;
+localparam S_RUN 	= 3'd1;
+localparam S_WAIT_0 = 3'd2;
+localparam S_WAIT_1 = 3'd3;
+localparam S_PAUSE	= 3'd4;
+localparam S_WAIT_NEGEDGE = 3'd5;
+
 
 logic [2:0] state_r, state_w;
 logic [3:0] interpolation_counter_r, interpolation_counter_w;
@@ -38,6 +41,9 @@ assign o_sram_addr = addr_counter_out;
 assign o_dac_data = out_dac_data;
 assign daclrck_negedge = ~i_daclrck & daclrck_dly;
 
+// [debug]
+assign o_state = state_r;
+
 always_comb begin
 	// design your control here
 	state_w					= state_r;
@@ -50,12 +56,12 @@ always_comb begin
 
 	case (state_r)
 		S_IDLE: begin
-			addr_counter_w = 0;
-			interpolation_counter_w = 0;
-			out_dac_data = 0;
-			pre_dac_data_w = 0;
-			dac_data_w = 0;
-			interpolation_counter_w = 0;
+			addr_counter_w = 20'b0;
+			interpolation_counter_w = 4'b0;
+			out_dac_data = 16'b0;
+			pre_dac_data_w = 16'b0;
+			dac_data_w = 16'b0;
+			interpolation_counter_w = 4'b0;
 
 			if (i_slow_0 | i_slow_1) begin
 				interpolation_finish_w = 1'b0;
@@ -79,18 +85,17 @@ always_comb begin
 				out_dac_data = dac_data_r;
 				dac_data_w = i_sram_data;
 				pre_dac_data_w = dac_data_r;
-				addr_counter_w = i_fast ? addr_counter_r + {16'b0, {1'b0, i_speed} + 4'd1} : addr_counter_r + 20'd1;
-				if (addr_counter_r >= i_end_addr) begin
+				addr_counter_w = i_fast ? addr_counter_r + {16'b0, ({1'b0, i_speed} + 4'd1)} : addr_counter_r + 20'd1;
+				if (addr_counter_out >= i_end_addr) begin
 					state_w = S_IDLE;
 				end
 				else if (i_pause) begin
 					state_w = S_PAUSE;
 				end
-				else if (i_stop) begin
-					state_w = S_IDLE;
-				end
 				else begin
-					state_w = S_WAIT_NEGEDGE;	
+					state_w = S_WAIT_NEGEDGE;
+					interpolation_counter_w = 4'd0;
+					interpolation_finish_w = 1'b0;
 				end
 			end
 		end
@@ -105,7 +110,7 @@ always_comb begin
 				interpolation_counter_w = interpolation_counter_r + 4'd1;
 				out_dac_data = pre_dac_data_r;
 				if (interpolation_counter_r >= {1'b0, i_speed}) begin
-					interpolation_counter_w = 0;
+					interpolation_counter_w = 4'b0;
 					interpolation_finish_w = 1'b1;
 					state_w = S_RUN;
 				end
@@ -122,7 +127,7 @@ always_comb begin
 				interpolation_counter_w = interpolation_counter_r + 4'd1;
 				out_dac_data = $signed( ($signed(dac_data_r - pre_dac_data_r) / $signed({13'b0, i_speed} + 16'd1)) * $signed({12'b0, interpolation_counter_r}) ) + pre_dac_data_r;
 				if (interpolation_counter_r >= {1'b0, i_speed}) begin
-					interpolation_counter_w = 0;
+					interpolation_counter_w = 4'd0;
 					interpolation_finish_w = 1'b1;
 					state_w = S_RUN;
 				end
@@ -148,17 +153,17 @@ always_comb begin
 			addr_counter_w = addr_counter_out;
 			pre_dac_data_w = pre_dac_data_tmp;
 			out_dac_data = pre_dac_data_tmp;
-			interpolation_counter_w = 0;
+			interpolation_counter_w = 4'd0;
 			if (daclrck_negedge) begin
 				if (i_slow_0) begin
 					state_w = S_WAIT_0;
 					interpolation_finish_w = 1'b0;
-					interpolation_counter_w = 0;
+					interpolation_counter_w = 4'b0;
 				end
 				else if (i_slow_1) begin
 					state_w = S_WAIT_1;
 					interpolation_finish_w = 1'b0;
-					interpolation_counter_w = 0;
+					interpolation_counter_w = 4'b0;
 				end
 				else begin
 					state_w = S_RUN;

@@ -12,10 +12,10 @@ output [1:0] o_state
 );
 
 // state
-localparam S_IDLE 	= 0; // idle, initial state
-localparam S_START 	= 1; // start setting
+localparam S_IDLE 	 = 0; // idle, initial state
+localparam S_START 	 = 1; // start setting
 localparam S_SETTING = 2; // setting state, which will send data through i2c to wm8731
-localparam S_FINISH 	= 3; // finish setup
+localparam S_FINISH  = 3; // finish setup
 // address and rw
 localparam Address = 7'b0011010; // wm8731 address
 localparam RW = 1'b0; // i2c writing (0)
@@ -70,9 +70,9 @@ always_comb begin
 	case (state_r)
 
 		S_IDLE: begin
-			start_w = 0;
-			fin_w = 0;
-			counter_w = 0;
+			start_w = 1'b0;
+			fin_w = 1'b0;
+			counter_w = 3'b0;
 			if (i_start) begin
 				state_w = S_START;
 			end
@@ -80,7 +80,7 @@ always_comb begin
 
 		S_START: begin
 			if (counter_r <= 6) begin
-				start_w = 1;
+				start_w = 1'b1;
 				state_w = S_SETTING;
 				case (counter_r)
 					0: begin reg_data_w = Reset; end
@@ -114,7 +114,7 @@ always_comb begin
 		end
 		
 		S_FINISH: begin
-			fin_w = 1;
+			fin_w = 1'b1;
 			// state_w = S_IDLE; maybe don't need to jump back to idle
 		end
 	endcase
@@ -124,10 +124,10 @@ always_ff @(posedge i_clk or negedge i_rst_n) begin
 	// design your control here
     if (!i_rst_n) begin
 		state_r <= S_IDLE;
-		reg_data_r <= 0;
-		counter_r <= 0;
-		start_r <= 0;
-		fin_r <= 0;
+		reg_data_r <= 16'b0;
+		counter_r <= 3'b0;
+		start_r <= 1'b0;
+		fin_r <= 1'b0;
 	end
 	else begin
 		state_r <= state_w;

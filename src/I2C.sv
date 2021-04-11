@@ -40,28 +40,28 @@ always_comb begin
     oen_w = oen_r;
     counter_w = counter_r;
     fin_w = fin_r;
-    sdat = 1;
+    sdat = 1'b1;
     case (state_r)
         // idle, not sending or reading from i2c
         S_IDLE: begin
-            fin_w = 0;
-            sdat = 1;
+            fin_w = 1'b0;
+            sdat = 1'b1;
             if (i_start) begin // pull down o_sdat, pull up oen_r
                 state_w = S_START;
-                oen_w = 1;
-                counter_w = 0;
+                oen_w = 1'b1;
+                counter_w = 4'b0;
             end
         end
 
         S_START: begin
             state_w = S_ADDR;
-            sdat = 0;
+            sdat = 1'b0;
         end
 
         // sending address (only 7 bit)
         S_ADDR: begin
-            sdat = i_addr[6 - counter_r];
-            counter_w = counter_r + 1'b1;
+            sdat = i_addr[4'd6 - counter_r];
+            counter_w = counter_r + 4'b1;
             if (counter_r == 6) state_w = S_RW;
         end
 
@@ -71,55 +71,55 @@ always_comb begin
             if (counter_r == 7) begin // will always be 7 in this case (S_ADDR send 7 bits)
                 state_w = S_ACK;
                 prev_state_w = S_RW;
-                oen_w = 0; // for ack, output enable is false
+                oen_w = 1'b0; // for ack, output enable is false
             end
         end
 
         // sending REG and DATA's upper 8 bit
         S_REG_DATA_UPPER: begin
             sdat = i_reg_data[4'd15 - counter_r];
-            counter_w = counter_r + 1'b1;
+            counter_w = counter_r + 4'b1;
             if (counter_r == 7) begin // go to ack
                 state_w = S_ACK;
                 prev_state_w = S_REG_DATA_UPPER;
-                oen_w = 0;
+                oen_w = 1'b0;
             end
         end
 
         // sending REG and DATA's lower 8 bit
         S_REG_DATA_LOWER: begin
             sdat = i_reg_data[4'd7 - counter_r];
-            counter_w = counter_r + 1'b1;
+            counter_w = counter_r + 4'b1;
             if (counter_r == 7) begin
                 state_w = S_ACK;
                 prev_state_w = S_REG_DATA_LOWER;
-                oen_w = 0;
+                oen_w = 1'b0;
             end
         end
 
         // stop, pull sdat from 0 to 1, indicate stop                              
         S_STOP: begin
-            sdat = 0; // to stop, make sdat 0 first, will be pulled up by S_STOP
+            sdat = 1'b0; // to stop, make sdat 0 first, will be pulled up by S_STOP
             state_w = S_IDLE;
-            fin_w = 1;
+            fin_w = 1'b1;
         end
 
         S_ACK: begin
             // TODO: check ACK
 
-            counter_w = 0;
+            counter_w = 4'b0;
             if (prev_state_r == S_RW) begin
                 state_w = S_REG_DATA_UPPER;
-                oen_w = 1; // go back to output 
+                oen_w = 1'b1; // go back to output 
             end
             else if (prev_state_r == S_REG_DATA_UPPER) begin
                 state_w = S_REG_DATA_LOWER;
-                oen_w = 1;
+                oen_w = 1'b1;
             end
             else if (prev_state_r == S_REG_DATA_LOWER) begin
                 // TODO: Stop, return to IDLE
                 state_w = S_STOP;
-                oen_w = 1;
+                oen_w = 1'b1;
             end
         end
     endcase
@@ -129,9 +129,9 @@ always_ff @(posedge i_clk or negedge i_rst_n) begin
     if (!i_rst_n) begin
         state_r <= S_IDLE;
         prev_state_r <= S_IDLE;
-        oen_r <= 1;
-        counter_r <= 0;
-        fin_r <= 0;
+        oen_r <= 1'b1;
+        counter_r <= 4'b0;
+        fin_r <= 1'b0;
     end
    
     else begin

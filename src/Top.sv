@@ -31,7 +31,7 @@ module Top (
 	output [5:0] o_record_time,
 	output [5:0] o_play_time,
 	output [5:0] o_state,
-	
+	// output [5:0] o_state_dsp,
 	// functional select switch
 	input i_switch_0, // slow_0
 	input i_switch_1, // slow_1
@@ -48,22 +48,22 @@ module Top (
 	output       o_LCD_RS,
 	output       o_LCD_RW,
 	output       o_LCD_ON,
-	output       o_LCD_BLON
+	output       o_LCD_BLON,
 
 	// LED
-	// output  [7:0] o_ledg
+	output  [8:0] o_ledg
 	// output [17:0] o_ledr
 );
 
 // design the FSM and states as you like
-localparam S_I2C_INIT   = 0;
-localparam S_IDLE       = 1;
-localparam S_RECD       = 2;
-localparam S_RECD_PAUSE = 3;
-localparam S_PLAY       = 4;
-localparam S_PLAY_PAUSE = 5;
-localparam S_PLAY_REPEAT = 6;
-
+localparam S_I2C_INIT   = 3'd0;
+localparam S_IDLE       = 3'd1;
+localparam S_RECD       = 3'd2;
+localparam S_RECD_PAUSE = 3'd3;
+localparam S_PLAY       = 3'd4;
+localparam S_PLAY_PAUSE = 3'd5;
+localparam S_PLAY_REPEAT = 3'd6;
+localparam S_WAIT_NEGEDGE = 3'd7;
 logic [2:0] state_r, state_w;
 logic i2c_oen;
 wire i2c_sdat;
@@ -78,6 +78,8 @@ logic play_fast, play_slow_0, play_slow_1, play_pause, play_start, play_stop, pl
 logic [2:0] play_speed;
 logic [19:0] end_addr_r, end_addr_w;
 logic playing;
+logic [2:0] pre_play_speed;
+// logic keep_going_r, keep_going_w;
 
 assign io_I2C_SDAT = (i2c_oen) ? i2c_sdat : 1'bz;
 
@@ -85,7 +87,7 @@ assign o_SRAM_ADDR = (state_r == S_RECD) ? addr_record : play_addr;
 assign io_SRAM_DQ  = (state_r == S_RECD) ? data_record : 16'dz; // sram_dq as output
 assign play_data   = (state_r != S_RECD) ? io_SRAM_DQ : 16'd0; // sram_dq as input
 
-// assign o_ledg = dac_data[7:0]; // [DEBUG] This is for testing
+assign o_ledg = {i_AUD_DACLRCK, 5'b0, play_start,  play_pause, play_stop}; // [DEBUG] This is for testing
 
 assign o_SRAM_WE_N = (state_r == S_RECD) ? 1'b0 : 1'b1;
 assign o_SRAM_CE_N = 1'b0;
@@ -116,13 +118,18 @@ assign o_play_time =  { 1'b0, play_addr[19:15] }; // to adjust with quick and sl
 
 // state
 assign o_state = state_r;
-
+// logic [2:0] dsp_state; // debug
+// assign o_state_dsp = dsp_state; // [debug]
 // lcd display use
 logic display_interpolation;
 logic [3:0] display_speed;
 assign display_interpolation = (play_slow_1) ? 1'b1 : 1'b0;
 assign display_speed[3] = (play_fast) ? 1'b1 : 1'b0;
 assign display_speed[2:0] = play_speed;
+
+// detect negedge
+logic daclrck_negedge, daclrck_dly;
+assign daclrck_negedge = ~i_AUD_DACLRCK & daclrck_dly;
 
 // === I2cInitializer ===
 // sequentially sent out settings to initialize WM8731 with I2C protocal
@@ -148,7 +155,7 @@ AudDSP dsp0(
 	.i_start(play_start),
 	.i_pause(play_pause),
 	.i_stop(play_stop),
-	.i_speed(play_speed),
+	.i_speed(pre_play_speed),
 	.i_fast(play_fast),
 	.i_slow_0(play_slow_0), // constant interpolation
 	.i_slow_1(play_slow_1), // linear interpolation
@@ -156,7 +163,8 @@ AudDSP dsp0(
 	.i_sram_data(play_data),
 	.i_end_addr(end_addr_w),
 	.o_dac_data(dac_data),
-	.o_sram_addr(play_addr)
+	.o_sram_addr(play_addr),
+	.o_state(dsp_state)
 );
 
 // [DEBUG]
@@ -210,10 +218,10 @@ always_comb begin
 	end_addr_w = end_addr_r;
 	recd_counter_w = recd_counter_r;
 	recd_sec_w = recd_sec_r;
-	recd_start = 0;
+	recd_start = 1'b0;
 	// play_start = 0;
-	i2c_init = 0;
-
+	i2c_init = 1'b0;
+	// keep_going_w = keep_going_r;
 	case (state_r)
 		S_I2C_INIT: begin
 			i2c_init = 1'b1;
@@ -259,8 +267,11 @@ always_comb begin
 			end
 		end
 		S_PLAY: begin
-			if (i_key_1) begin
+			if (i_key_1 ) begin
 				state_w = S_PLAY_PAUSE;
+			end
+			else if (pre_play_speed != play_speed) begin
+				state_w = S_WAIT_NEGEDGE;
 			end
 			else if (i_key_2) begin
 				state_w = S_IDLE;
@@ -276,8 +287,7 @@ always_comb begin
 		end
 		S_PLAY_PAUSE: begin
 			if (i_key_1) begin
-				state_w = S_PLAY_REPEAT;
-				// play_start = 1;
+				state_w = S_PLAY;
 			end
 			else if (i_key_2) begin
 				state_w = S_IDLE; 
@@ -286,7 +296,11 @@ always_comb begin
 		S_PLAY_REPEAT: begin
 			state_w = S_PLAY;
 		end
-
+		S_WAIT_NEGEDGE: begin
+			if(daclrck_negedge) begin
+				state_w = S_PLAY;
+			end
+		end
 		default: 
 		state_w = state_r;
 	endcase
@@ -295,16 +309,27 @@ end
 always_ff @(posedge i_clk or negedge i_rst_n) begin
 	if (!i_rst_n) begin
         state_r <= S_I2C_INIT;
-		end_addr_r <= 0;
-		recd_sec_r <= 0;
-		recd_counter_r <= 0;
+		end_addr_r <= 20'b0;
+		recd_sec_r <= 6'b0;
+		recd_counter_r <= 24'b0;
+		daclrck_dly  <= i_AUD_DACLRCK;
 	end
 	else begin
         state_r <= state_w;
 		end_addr_r <= end_addr_w;
 		recd_sec_r <= recd_sec_w;
 		recd_counter_r <= recd_counter_w;
+		daclrck_dly  <= i_AUD_DACLRCK;
 	end
 end
-
+always_ff @(negedge i_AUD_DACLRCK or negedge i_rst_n) begin
+	if (!i_rst_n) begin
+		pre_play_speed <= 3'b0;
+		// keep_going_r <= 1'b0;
+	end
+	else begin
+		pre_play_speed <= play_speed;
+		// keep_going_r	<= keep_going_w;
+	end
+end
 endmodule
