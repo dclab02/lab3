@@ -13,9 +13,9 @@ module AudDSP (
 	input   i_slow_1, // linear interpolation
 	input   i_daclrck,
 	input   [15:0] i_sram_data,
-	input	[19:0] i_end_addr, // end address
+	input	[20:0] i_end_addr, // end address
 	output  [15:0] o_dac_data,
-	output  [19:0] o_sram_addr,
+	output  [20:0] o_sram_addr,
 	output [2:0]   o_state  // [debug]
 );
 
@@ -33,7 +33,7 @@ logic [3:0] interpolation_counter_r, interpolation_counter_w;
 logic signed [15:0] out_dac_data;
 logic signed [15:0] pre_dac_data_r, pre_dac_data_w, pre_dac_data_tmp;
 logic signed [15:0] dac_data_r, dac_data_w;
-logic [19:0] addr_counter_r, addr_counter_w, addr_counter_out;
+logic [20:0] addr_counter_r, addr_counter_w, addr_counter_out;
 logic interpolation_finish_r, interpolation_finish_w;
 logic daclrck_negedge, daclrck_dly;
 
@@ -56,7 +56,7 @@ always_comb begin
 
 	case (state_r)
 		S_IDLE: begin
-			addr_counter_w = 20'b0;
+			addr_counter_w = 21'b0;
 			interpolation_counter_w = 4'b0;
 			out_dac_data = 16'b0;
 			pre_dac_data_w = 16'b0;
@@ -85,7 +85,7 @@ always_comb begin
 				out_dac_data = dac_data_r;
 				dac_data_w = i_sram_data;
 				pre_dac_data_w = dac_data_r;
-				addr_counter_w = i_fast ? addr_counter_r + {16'b0, ({1'b0, i_speed} + 4'd1)} : addr_counter_r + 20'd1;
+				addr_counter_w = i_fast ? addr_counter_r + {17'b0, ({1'b0, i_speed} + 4'd1)} : addr_counter_r + 21'd1;
 				if (addr_counter_out >= i_end_addr) begin
 					state_w = S_IDLE;
 				end
@@ -178,7 +178,7 @@ always_ff @(posedge i_clk or negedge i_rst_n) begin
     if (!i_rst_n) begin
 		dac_data_r 					<= 16'b0;
 		state_r 					<= S_IDLE;
-		addr_counter_out 			<= 20'b0;
+		addr_counter_out 			<= 21'b0;
 		pre_dac_data_tmp			<= 16'b0;
 		interpolation_finish_r 		<= 1'b0;
 		daclrck_dly 				<= i_daclrck;

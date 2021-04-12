@@ -67,7 +67,8 @@ localparam S_WAIT_NEGEDGE = 3'd7;
 logic [2:0] state_r, state_w;
 logic i2c_oen;
 wire i2c_sdat;
-logic [19:0] addr_record, play_addr;
+logic [19:0] addr_record;
+logic [20:0] play_addr;
 logic [15:0] data_record, play_data, dac_data;
 
 logic i2c_init, i2c_init_stat;
@@ -76,14 +77,14 @@ logic recd_start, recd_pause, recd_stop;
 //relate to DSP module
 logic play_fast, play_slow_0, play_slow_1, play_pause, play_start, play_stop, play_repeat;
 logic [2:0] play_speed;
-logic [19:0] end_addr_r, end_addr_w;
+logic [20:0] end_addr_r, end_addr_w;
 logic playing;
 logic [2:0] pre_play_speed;
 // logic keep_going_r, keep_going_w;
 
 assign io_I2C_SDAT = (i2c_oen) ? i2c_sdat : 1'bz;
 
-assign o_SRAM_ADDR = (state_r == S_RECD) ? addr_record : play_addr;
+assign o_SRAM_ADDR = (state_r == S_RECD) ? addr_record : play_addr[19:0];
 assign io_SRAM_DQ  = (state_r == S_RECD) ? data_record : 16'dz; // sram_dq as output
 assign play_data   = (state_r != S_RECD) ? io_SRAM_DQ : 16'd0; // sram_dq as input
 
@@ -251,7 +252,7 @@ always_comb begin
 			if (i_key_0) begin
 				state_w = S_RECD_PAUSE;
 			end
-			else if (i_key_2 || addr_record == 20'b11111111111111111111) begin
+			else if (i_key_2 || addr_record == 21'b011111111111111111111) begin
 				state_w = S_IDLE;
 				end_addr_w = addr_record;
 			end
@@ -309,7 +310,7 @@ end
 always_ff @(posedge i_clk or negedge i_rst_n) begin
 	if (!i_rst_n) begin
         state_r <= S_I2C_INIT;
-		end_addr_r <= 20'b0;
+		end_addr_r <= 21'b0;
 		recd_sec_r <= 6'b0;
 		recd_counter_r <= 24'b0;
 		daclrck_dly  <= i_AUD_DACLRCK;
